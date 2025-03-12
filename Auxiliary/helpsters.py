@@ -10,7 +10,7 @@ from osgeo import ogr, osr
 import random
 
 # getFilelist returns a list with all files of a certain type in a path
-def getFilelist(originpath, ftyp, deep = False):
+def getFilelist(originpath, ftyp, deep = False, order = True):
     out   = []
     if deep == False:
         files = os.listdir(originpath)
@@ -27,6 +27,8 @@ def getFilelist(originpath, ftyp, deep = False):
             for i in files:
                 if i.split('.')[-1] in ftyp:
                     out.append(os.path.join(path, i))
+    if order == True:
+        out = sorted(out)
     return out
 
 def plotter(array, row=1, col=1, names=False, title=False):
@@ -86,6 +88,9 @@ def makeZeroNAN(arr):
     arr[arr == 0] = np.nan
     return arr
 
+def RasterKiller(raster_path):
+    if os.path.isfile(raster_path):
+        os.remove(raster_path)
 
 #####################################################################################
 #####################################################################################
@@ -216,3 +221,30 @@ def exportNCarrayDerivatesInt(ncfile, storPath, fileName, bandname, arr, make_ui
 
     out_ds.GetRasterBand(1).SetDescription(bandname	)
     del out_ds
+
+
+#####################################################################################
+#####################################################################################
+################# Preprocess FORCE Output ###########################################
+#####################################################################################
+##################################################################################### 
+
+def sortListwithOtherlist(list1, list2):
+    '''Sorts list2 based on sorted(list1). Retruns sorted list2'''
+    sortlist1, sortlist2 = zip(*sorted(zip(list1, list2)))
+    return list(sortlist2)
+
+def getBluGrnRedBnrFORCEList(filelist):
+    '''Takes a list of paths to an exploded FORCE output and returns a list with ordered paths
+    First all bluem then green, red and bnir bands. Furthermore, paths are chronologically sorted (1,2,3,4..months)'''
+    blu = [file for file in filelist if file.split('SEN2H_')[-1].split('_')[0] == 'BLU']
+    grn = [file for file in filelist if file.split('SEN2H_')[-1].split('_')[0] == 'GRN']
+    red = [file for file in filelist if file.split('SEN2H_')[-1].split('_')[0] == 'RED']
+    bnr = [file for file in filelist if file.split('SEN2H_')[-1].split('_')[0] == 'BNR']
+
+    blu = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in blu], blu)
+    grn = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in grn], grn)
+    red = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in red], red)
+    bnr = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in bnr], bnr)
+
+    return sum([blu, grn, red, bnr], [])

@@ -8,29 +8,16 @@ import xarray as xr
 import time
 
 
-df = pd.read_csv('/data/Aldhani/eoagritwin/et/data/stations/et_stations.csv', sep=';', encoding="ISO-8859-1")
-# List of valid cell IDs
-valids = df['FORCE_TILE'].tolist()
-
-# read FORCE_TILES shapefile
-gdf = gpd.read_file('/data/Aldhani/dc/deu/vector/datacube-grid_DEU_10km.gpkg', layer='datacube-grid_DEU_10km')
-gdf = gdf.to_crs(epsg=4326)
-
-aoiList = []
-# Loop through the features
-for _, row in gdf.iterrows():
-    if row['Tile_ID'] in valids:
-        geometry = row.geometry  # Get geometry of the feature
-        if geometry.geom_type == 'Polygon':
-            coords = list(geometry.exterior.coords)  # Get coordinates of polygon
-        else:
-            coords = list(geometry.coords)  # For non-polygon geometries
-
-        clist = [c for co in coords for c in co]
-        clist.sort()
-        aoiList.append({"west": clist[0], "south": clist[5], "east": clist[4], "north": clist[9]})
-
-
+def cloud_filter(pixel):
+    return (
+        (pixel["cloud_in_visible"] == 0) and  # Not cloud in visible
+        (pixel["cloud_in_thin_cirrus"] == 0) and  # Not cloud in thin cirrus
+        (pixel["exception"] == 0) and  # Exception == 0
+        (pixel["bayes_in_single_moderate"] == 0) and  # Not bayes in single moderate
+        (pixel["confidence_in"] < 16384) and  # Confidence less than threshold
+        (pixel["confidence_in.land"] == 1) and  # Confidence in land
+        (pixel["LST"] > -32768)  # LST greater than threshold
+    )
 
 
 connection = openeo.connect("openeo.dataspace.copernicus.eu").authenticate_oidc()
@@ -70,10 +57,6 @@ dates = [["2017-01-01", "2017-02-01"], ["2017-02-01", "2017-03-01"], ["2017-03-0
          ["2024-09-01", "2024-10-01"], ["2024-10-01", "2024-11-01"], ["2024-11-01", "2024-12-01"], ["2024-12-01", "2025-01-01"]]
 
 germany = {"west": 5.592041, "south": 47.129951, "east": 15.26001, "north": 55.09723}
-# germanyList = [{"west": 5.592041, "south": 47.129951, "east": 10, "north": 51},
-#                {"west": 10, "south": 47.129951, "east": 15.26001, "north": 51},
-#                {"west": 5.592041, "south": 51, "east": 10, "north": 55.09723},
-#                {"west": 10, "south": 51, "east": 15.26001, "north": 55.09723}]
 
 while dates:
 
@@ -90,24 +73,17 @@ while dates:
             else:
                 try:
                     sentinel3_cube = connection.load_collection(
-                        "SENTINEL3_SLSTR_L2_LST",
-                        spatial_extent = germany,
-                        temporal_extent = date,
-                        bands=["LST"],
+                    "SENTINEL3_SLSTR_L2_LST",
+                    spatial_extent = germany,
+                    temporal_extent = date,
+                    bands=["LST", "cloud_in_visible", "cloud_in_thin_cirrus", "exception", "bayes_in_single_moderate", "confidence_in"]
                     )
+                    
+                    filtered_s3 = sentinel3_cube .process("mask", data=sentinel3_cube , mask=sentinel3_cube .apply(cloud_filter))
+                    filtered_s3.download(storPath)
 
-                    cloud_mask = connection.load_collection(
-                        "SENTINEL3_SLSTR_L2_LST",
-                        spatial_extent = germany,
-                        temporal_extent = date,
-                        bands=["confidence_in"],
-                    )
-
-                    cloud_mask = cloud_mask >= 16384
-
-                    LST = sentinel3_cube.mask(cloud_mask)
-                    LST.download(storPath)
-
+                    dates.remove(date)
+                    
                 except Exception as e:
                     print(e)
                     t = time.localtime()
@@ -116,6 +92,33 @@ while dates:
                     continue
 
 
+
+# df = pd.read_csv('/data/Aldhani/eoagritwin/et/data/stations/et_stations.csv', sep=';', encoding="ISO-8859-1")
+# # List of valid cell IDs
+# valids = df['FORCE_TILE'].tolist()
+
+# # read FORCE_TILES shapefile
+# gdf = gpd.read_file('/data/Aldhani/dc/deu/vector/datacube-grid_DEU_10km.gpkg', layer='datacube-grid_DEU_10km')
+# gdf = gdf.to_crs(epsg=4326)
+
+# aoiList = []
+# # Loop through the features
+# for _, row in gdf.iterrows():
+#     if row['Tile_ID'] in valids:
+#         geometry = row.geometry  # Get geometry of the feature
+#         if geometry.geom_type == 'Polygon':
+#             coords = list(geometry.exterior.coords)  # Get coordinates of polygon
+#         else:
+#             coords = list(geometry.coords)  # For non-polygon geometries
+
+#         clist = [c for co in coords for c in co]
+#         clist.sort()
+#         aoiList.append({"west": clist[0], "south": clist[5], "east": clist[4], "north": clist[9]})
+
+# germanyList = [{"west": 5.592041, "south": 47.129951, "east": 10, "north": 51},
+#                {"west": 10, "south": 47.129951, "east": 15.26001, "north": 51},
+#                {"west": 5.592041, "south": 51, "east": 10, "north": 55.09723},
+#                {"west": 10, "south": 51, "east": 15.26001, "north": 55.09723}]
 
 # dates = [["2017-01-01", "2017-01-31"], ["2017-02-01", "2017-02-28"], ["2017-03-01", "2017-03-31"], ["2017-04-01", "2017-04-30"],
 #          ["2017-05-01", "2017-05-31"], ["2017-06-01", "2017-06-30"], ["2017-07-01", "2017-07-31"], ["2017-08-01", "2017-08-31"], 
