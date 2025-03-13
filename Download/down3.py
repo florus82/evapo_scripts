@@ -8,17 +8,6 @@ import xarray as xr
 import time
 
 
-def cloud_filter(pixel):
-    return (
-        (pixel["cloud_in_visible"] == 0) and  # Not cloud in visible
-        (pixel["cloud_in_thin_cirrus"] == 0) and  # Not cloud in thin cirrus
-        (pixel["exception"] == 0) and  # Exception == 0
-        (pixel["bayes_in_single_moderate"] == 0) and  # Not bayes in single moderate
-        (pixel["confidence_in"] < 16384) and  # Confidence less than threshold
-        (pixel["confidence_in.land"] == 1) and  # Confidence in land
-        (pixel["LST"] > -32768)  # LST greater than threshold
-    )
-
 
 connection = openeo.connect("openeo.dataspace.copernicus.eu").authenticate_oidc()
 
@@ -62,7 +51,7 @@ while dates:
 
     for i, date in enumerate(dates):
 
-            storPath = f"/data/Aldhani/eoagritwin/et/data/Sentinel3/raw/Germany_{('-').join(date[0].split('-')[:2])}.nc"
+            storPath = f"/data/Aldhani/eoagritwin/et/Sentinel3/raw/Germany_{('-').join(date[0].split('-')[:2])}.nc"
             print(storPath)
             
             if os.path.exists(storPath):
@@ -76,14 +65,19 @@ while dates:
                     "SENTINEL3_SLSTR_L2_LST",
                     spatial_extent = germany,
                     temporal_extent = date,
-                    bands=["LST", "cloud_in_visible", "cloud_in_thin_cirrus", "exception", "bayes_in_single_moderate", "confidence_in"]
+                    bands=["LST", "exception", "confidence_in"]
                     )
                     
-                    filtered_s3 = sentinel3_cube .process("mask", data=sentinel3_cube , mask=sentinel3_cube .apply(cloud_filter))
-                    filtered_s3.download(storPath)
+                    band1 = sentinel3_cube.band('confidence_in')
+                    band2 = sentinel3_cube.band('LST')
+                    band3 = sentinel3_cube.band('exception')
 
+                    cloud_mask = (band1 >= 16384) | (band2 < -32768) | (band3 != 0)
+                    sentinel3_cube_masked = sentinel3_cube.mask(cloud_mask)
+                    sentinel3_cube_masked = sentinel3_cube_masked.filter_bands(['LST'])
+                    sentinel3_cube_masked.download(storPath)
                     dates.remove(date)
-                    
+
                 except Exception as e:
                     print(e)
                     t = time.localtime()

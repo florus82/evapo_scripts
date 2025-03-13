@@ -31,6 +31,7 @@ def getFilelist(originpath, ftyp, deep = False, order = True):
         out = sorted(out)
     return out
 
+
 def plotter(array, row=1, col=1, names=False, title=False):
 
     # Plot the slices
@@ -72,9 +73,11 @@ def plotter(array, row=1, col=1, names=False, title=False):
     plt.tight_layout()
     plt.show()
 
+
 def getNestedListMinLengthIndex(nestedList):
     res = [index for index, band in enumerate(nestedList) if len(band) == min([len(i) for i in nestedList])]
     return res[0]
+
 
 def getBandNames(rasterstack):
     bands = []
@@ -84,9 +87,11 @@ def getBandNames(rasterstack):
         bands.append(ds.GetRasterBand(i+1).GetDescription())
     return bands
 
+
 def makeZeroNAN(arr):
     arr[arr == 0] = np.nan
     return arr
+
 
 def RasterKiller(raster_path):
     if os.path.isfile(raster_path):
@@ -119,6 +124,7 @@ def getAllDatesS3(listOfFiles, year='all'):
     else:
         return np.sort(tim)
 
+
 def getGeoTransFromNC(ncfile):
     '''Takes a path to an ncfile or an xarray_dataset and returns a tupel that can be used for gdal's SetGeotransform()'''
     
@@ -131,6 +137,7 @@ def getGeoTransFromNC(ncfile):
     pixelHeight = -pixelWidth
     return (upperLeft_X, pixelWidth, rotation, upperLeft_Y, rotation, pixelHeight)
 
+
 def getShapeFromNC(ncfile):
     '''Takes a path to an ncfile or an xarray_dataset and returns shape[1], shape[0], shape[2] ,comparable to np.array.shape()'''
     
@@ -138,20 +145,23 @@ def getShapeFromNC(ncfile):
         ncfile = xr.open_dataset(ncfile)
     return len(ncfile.coords['x'].values), len(ncfile.coords['y'].values), ncfile[','.join(ncfile.data_vars.keys()).split(',')[-1]].shape[0]
 
+
 def getDataFromNC(ncfile):
     '''Takes a path to an ncfile or an xarray_dataset and returns a 3D numpy array of the data'''
     
     if type(ncfile) == str:
         ncfile = xr.open_dataset(ncfile)
-    arr = ncfile[','.join(ncfile.data_vars.keys()).split(',')[-1]].to_numpy()
+    arr = ncfile[[b for b in ','.join(ncfile.data_vars.keys()).split(',') if b == 'LST'][0]].to_numpy() # makes sure that LST exists
     return np.swapaxes(np.swapaxes(arr, 0, 1), 1, 2)
     
+
 def getCRS_WKTfromNC(ncfile):
     '''Takes a path to an ncfile or an xarray_dataset and returns coordinate sys as wkt'''
     
     if type(ncfile) == str:
         ncfile = xr.open_dataset(ncfile)
     return ncfile['crs'].attrs['crs_wkt']
+
 
 def convertNCtoTIF(ncfile, storPath, fileName, accDT, make_uint16 = False, explode=False):
     '''Converts a filepath to an nc file or a .nc file to a .tif with option to store it UINT16 (Kelvin values are multiplied by 100 before decimals are cut off)'''
@@ -195,6 +205,7 @@ def convertNCtoTIF(ncfile, storPath, fileName, accDT, make_uint16 = False, explo
             out_ds.GetRasterBand(1).SetDescription(str(accDT[band]).split('.')[0])
             del out_ds
 
+
 def getAccDateTimesByfilename(dicti, filename):
     """Finds the index of a filename in lookUp['filename'] and retrieves and return corresponding accDateTimes"""
     
@@ -204,6 +215,7 @@ def getAccDateTimesByfilename(dicti, filename):
         return accDateTimes
     else:
         return print(f'Filename {filename} not found!')
+
 
 def exportNCarrayDerivatesInt(ncfile, storPath, fileName, bandname, arr, make_uint16 = False):
 
@@ -233,6 +245,7 @@ def sortListwithOtherlist(list1, list2):
     '''Sorts list2 based on sorted(list1). Retruns sorted list2'''
     sortlist1, sortlist2 = zip(*sorted(zip(list1, list2)))
     return list(sortlist2)
+
 
 def getBluGrnRedBnrFORCEList(filelist):
     '''Takes a list of paths to an exploded FORCE output and returns a list with ordered paths
