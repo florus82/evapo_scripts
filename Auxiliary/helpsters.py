@@ -231,7 +231,7 @@ def exportNCarrayDerivatesInt(ncfile, storPath, fileName, bandname, arr, make_ui
     out_ds.SetProjection(getCRS_WKTfromNC(ncfile))
     out_ds.GetRasterBand(1).WriteArray(arr)
 
-    out_ds.GetRasterBand(1).SetDescription(bandname	)
+    out_ds.GetRasterBand(1).SetDescription(bandname)
     del out_ds
 
 
@@ -261,3 +261,12 @@ def getBluGrnRedBnrFORCEList(filelist):
     bnr = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in bnr], bnr)
 
     return sum([blu, grn, red, bnr], [])
+
+
+def getFORCExyRange(tiles):
+    '''take a list of subsetted FORCE Tile names in the Form of X0069_Y0042 and returns a string to be used as filename 
+    that gives X and Y range ,e.g. Force_X_from_68_to_69_Y_from_42_to_42'''
+    X = [int(tile.split('_')[0][-2:]) for tile in tiles]
+    Y = [int(tile.split('_')[1][-2:]) for tile in tiles]
+
+    return f'Force_X_from_{min(X)}_to_{max(X)}_Y_from_{min(Y)}_to_{max(Y)}'
