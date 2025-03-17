@@ -72,7 +72,7 @@ while dates:
                     band2 = sentinel3_cube.band('LST')
                     band3 = sentinel3_cube.band('exception')
 
-                    cloud_mask = (band1 >= 16384) | (band2 < -32768) | (band3 != 0)
+                    cloud_mask = (band1 >= 16384) | (band2 <= -32768) | (band3 != 0)
                     sentinel3_cube_masked = sentinel3_cube.mask(cloud_mask)
                     sentinel3_cube_masked = sentinel3_cube_masked.filter_bands(['LST'])
                     sentinel3_cube_masked.download(storPath)

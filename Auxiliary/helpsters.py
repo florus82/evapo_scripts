@@ -106,8 +106,9 @@ def RasterKiller(raster_path):
 def getAllDatesS3(listOfFiles, year='all'):
     '''Takes a list of paths of .nc files for Sentinel-3 if year == all, all paths are considered. 
     If a year is provided, the dates are only extracted for the corresponding yearand is returned 
-    as well as a pathlist subsetted to this year. Expected filenaming convention: Germany_2017-01-01_2017-01-31.nc.
-    The second 2017 is important here'''
+    as well as a pathlist subsetted to this year. 
+    Expected filenaming convention: Germany_2017-01-01_2017-01-31.nc. The second 2017 is important here
+    Germany_2017-1.nc works as well'''
 
     if year != 'all':
         listOfFiles = [file for file in listOfFiles if int(file.split('_')[-1][0:4]) == year]
