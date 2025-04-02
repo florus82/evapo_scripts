@@ -6,10 +6,12 @@ import math
 import os
 import time
 import xarray as xr 
+import osgeo
 from osgeo import ogr, osr
 import random
+import xml.etree.ElementTree as ET
 
-# getFilelist returns a list with all files of a certain type in a path
+
 def getFilelist(originpath, ftyp, deep = False, order = True):
     out   = []
     if deep == False:
@@ -243,9 +245,11 @@ def exportNCarrayDerivatesInt(ncfile, storPath, fileName, bandname, arr, make_ui
 ##################################################################################### 
 
 def sortListwithOtherlist(list1, list2):
-    '''Sorts list2 based on sorted(list1). Retruns sorted list2'''
+    ''' list1: unsorted list
+        list2: unsorted list with same length as list1
+        Sorts list2 based on sorted(list1). Returns sorted list1 list2'''
     sortlist1, sortlist2 = zip(*sorted(zip(list1, list2)))
-    return list(sortlist2)
+    return list(sortlist1), list(sortlist2)
 
 
 def getBluGrnRedBnrFORCEList(filelist):
@@ -256,10 +260,10 @@ def getBluGrnRedBnrFORCEList(filelist):
     red = [file for file in filelist if file.split('SEN2H_')[-1].split('_')[0] == 'RED']
     bnr = [file for file in filelist if file.split('SEN2H_')[-1].split('_')[0] == 'BNR']
 
-    blu = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in blu], blu)
-    grn = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in grn], grn)
-    red = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in red], red)
-    bnr = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in bnr], bnr)
+    blu = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in blu], blu)[-1]
+    grn = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in grn], grn)[-1]
+    red = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in red], red)[-1]
+    bnr = sortListwithOtherlist([int(t.split('-')[-1].split('.')[0]) for t in bnr], bnr)[-1]
 
     return sum([blu, grn, red, bnr], [])
 
@@ -271,3 +275,66 @@ def getFORCExyRange(tiles):
     Y = [int(tile.split('_')[1][-2:]) for tile in tiles]
 
     return f'Force_X_from_{min(X)}_to_{max(X)}_Y_from_{min(Y)}_to_{max(Y)}'
+
+
+def convertVRTpathsTOrelative(vrt_path):
+    tree = ET.parse(vrt_path)
+    root = tree.getroot()
+
+    for source in root.findall(".//SourceFilename"):
+        abs_path = source.text
+        rel_path = os.path.relpath(abs_path, os.path.dirname(vrt_path))  # Convert to relative
+        source.text = rel_path
+        source.set("relativeToVRT", "1")  # Add the attribute
+
+    # Save the modified VRT file
+    tree.write(vrt_path)
+
+
+
+
+
+#####################################################################################
+#####################################################################################
+################# General stuff #####################################################
+#####################################################################################
+##################################################################################### 
+
+def getSpatRefRas(layer):
+    # check type of layer
+    if type(layer) is gdal.Dataset:
+        SPRef = osr.SpatialReference()
+        SPRef.ImportFromWkt(layer.GetProjection())
+
+    elif type(layer) is str:
+        lyr   = gdal.Open(layer)
+        SPRef = osr.SpatialReference()
+        SPRef.ImportFromWkt(lyr.GetProjection())
+
+    #print(SPRef)
+    return(SPRef)
+
+def getSpatRefVec(layer):
+
+    # check the type of layer
+    if type(layer) is ogr.Geometry:
+        SPRef   = layer.GetSpatialReference()
+
+    elif type(layer) is ogr.Feature:
+        lyrRef  = layer.GetGeometryRef()
+        SPRef   = lyrRef.GetSpatialReference()
+
+    elif type(layer) is ogr.Layer:
+        SPRef   = layer.GetSpatialRef()
+
+    elif type(layer) is ogr.DataSource:
+        lyr     = layer.GetLayer(0)
+        SPRef   = lyr.GetSpatialRef()
+
+    elif type(layer) is str:
+        lyrOpen = ogr.Open(layer)
+        lyr     = lyrOpen.GetLayer(0)
+        SPRef   = lyr.GetSpatialRef()
+
+    #print(SPRef)
+    return(SPRef)
