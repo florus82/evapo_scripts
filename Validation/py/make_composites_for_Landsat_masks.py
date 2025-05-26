@@ -5,7 +5,8 @@ from helperToolz.evapo import *
 import geopandas as gpd
 import tarfile
 from rasterio.transform import from_bounds
-import rasterio
+import shutil
+import gzip
 
 workhorse = True
 
@@ -26,6 +27,8 @@ utm_to_epsg = {
     '36': 32636,  # Russia, Black Sea region
 }
 
+dir_for_corrupt_files = f'/data/{origin}et/Landsat/raw/bad_files/'
+os.makedirs(dir_for_corrupt_files, exist_ok=True)
 
 #### get path and rows of scenes that have data for the chosen AOI (e.g. Brandenburg)
 
@@ -60,8 +63,17 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
     #### do the compositing monthly
     for year in range(2024, 2017, -1):
         print(year)
+        outdir = f'/data/{origin}et/Landsat/composites/{state}/{year}'
+        if os.path.exists(outdir):
+            fList = getFilelist(outdir, '.tif')
+            if len(fList) == 12:
+                continue
+        else:
+            os.makedirs(outdir, exist_ok=True)
+        
         for month in range(1, 13, 1):
             print(month)
+            #month = 7
             # check if temp_folder is empty and delete everything if not
             tempF = f'/data/{origin}et/Landsat/extracts/'
             if len(getFilelist(tempF, '.nc')) > 0:
@@ -74,9 +86,16 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
             year_month = lookUp.get_by_year_and_month(year, month)
             year_month_path_row = [scene for scene in year_month for pr in path_rows if pr in scene]
 
+   
+
             for landsat_file in year_month_path_row:
-                with tarfile.open(landsat_file, 'r:gz') as tar:
-                    tar.extractall(tempF)
+                try:
+                    with tarfile.open(landsat_file, 'r:gz') as tar:
+                        tar.extractall(tempF)
+                except (tarfile.ReadError, gzip.BadGzipFile, OSError):
+                    basename = os.path.basename(landsat_file)
+                    corrupt_path = os.path.join(dir_for_corrupt_files, basename)
+                    shutil.move(landsat_file, corrupt_path)
 
 
             # List of file paths
@@ -113,11 +132,15 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
 
             for counti, xr_raster in enumerate(datasets):
                 src_ds = xarray_to_gdal_mem(xr_raster)
-                warped_ds = warp_to_template(src_ds, f'/data/{origin}et/Auxiliary/Landsat_GER_mask/states/{state}.tif')
+                warped_ds = warp_to_template(src_ds, f'/data/{origin}et/Auxiliary/Landsat_GER_mask/states/{state}.tif', outType=gdal.GDT_Float32)
                 arr = warped_ds.GetRasterBand(1).ReadAsArray()
                 warped_arrays.append(arr)
 
             warped_stack = np.dstack(warped_arrays)
+            # makeTif_np_to_matching_tif(warped_stack, 
+            #                             f'/data/{origin}et/Auxiliary/Landsat_GER_mask/states/{state}.tif',
+            #                         f'/data/{origin}et/Landsat/stacks/ETA_{state}_{year}_{month:02d}_median.tif', 0, gdalType=gdal.GDT_Float32, bands=warped_stack.shape[2])
+            warped_stack = warped_stack.astype(float)
             warped_stack[warped_stack == 0.0] = np.nan
             median  = np.nanmedian(warped_stack, axis=2)
 
@@ -126,8 +149,6 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
             mask_arr = mask_ds.GetRasterBand(1).ReadAsArray()
             median_masked = median * mask_arr
 
-            outdir = f'/data/{origin}et/Landsat/composites/{state}/{year}'
-            os.makedirs(outdir, exist_ok=True)
             makeTif_np_to_matching_tif(median_masked, 
                                         f'/data/{origin}et/Auxiliary/Landsat_GER_mask/states/{state}.tif',
                                     f'{outdir}/Landsat_ETA_{state}_{year}_{month:02d}_median.tif', 0, gdalType=gdal.GDT_Float32)
