@@ -127,6 +127,8 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
                 da.rio.write_crs(f'EPSG:{utm_to_epsg[utm_zone]}', inplace=True)
                 datasets.append(da)
 
+            if len(datasets) == 0:
+                continue
 
             warped_arrays = []
 
