@@ -7,7 +7,8 @@ import re
 workhorse = True
 clean_up = True
 clean_up_deep = False
-do_S3 = True
+do_S2 = False
+do_S3 = False
 
 if workhorse:
     origin = 'Aldhani/eoagritwin/'
@@ -59,7 +60,7 @@ if do_S3:
         year_files = getFilelist(os.path.join(S3_path, year), '.tif')
 
         for metric in metrics:
-            print(f'....for metric {metric}')
+            print(f'....for metric: {metric}')
             metric_paths = [file for file in year_files if metric in file]
 
             for metric_path in metric_paths:
@@ -102,42 +103,43 @@ if do_S3:
                     s3_dict.to_parquet(outPath1, index=False)
 
 
-########################################################################## Sentinel 2
-# get FORCE extracts
-npy_files = getFilelist(f'/data/{origin}et/Auxiliary/dumps_for_training_collecting/', '.npy')
+if do_S2:
+    ########################################################################## Sentinel 2
+    # get FORCE extracts
+    npy_files = getFilelist(f'/data/{origin}et/Auxiliary/dumps_for_training_collecting/', '.npy')
 
-for year in range(2017, 2025, 1):
-    year_list = [npy_file for npy_file in npy_files if str(year) in npy_file]
+    for year in range(2017, 2025, 1):
+        year_list = [npy_file for npy_file in npy_files if str(year) in npy_file]
 
-    if not year_list:
-        print(f'nothing for S2 in year {year} yet')
-        continue
-    else:
-        for index in indices:
-            dat = [np.load(file) for file in year_list if index in file]
+        if not year_list:
+            print(f'nothing for S2 in year {year} yet')
+            continue
+        else:
+            for index in indices:
+                dat = [np.load(file) for file in year_list if index in file]
 
-            if not dat:
-                print(f'nothing for S2 in {year} for index {index}')
-                continue
-            else:
-                outPath2 = f'/data/{origin}et/Training_ML/training_data/S2_{year}_{index}.parquet'
-                if os.path.isfile(outPath2):
-                    print(f'file {outPath2.split('/')[-1]} already exists :) .... not doing it again')
+                if not dat:
+                    print(f'nothing for S2 in {year} for index {index}')
                     continue
                 else:
-                    print(f'work on file S2_{year}_{index}')
-                    npy_dicts = []
-                    dat = dat[0]
-                    for row in range(dat.shape[0]):
-                        for col in range(dat.shape[1]): 
-                            npy_dicts.append({'row': ind_rows[col],
-                                            'col': ind_cols[col],
-                                            'index': index,
-                                            'doy': row+1,
-                                            'S2': dat[row,col]})
-                            
-                    npy_dict = pd.DataFrame(npy_dicts)
-                    npy_dict.to_parquet(outPath2, index=False)
+                    outPath2 = f'/data/{origin}et/Training_ML/training_data/S2_{year}_{index}.parquet'
+                    if os.path.isfile(outPath2):
+                        print(f'file {outPath2.split('/')[-1]} already exists :) .... not doing it again')
+                        continue
+                    else:
+                        print(f'work on file S2_{year}_{index}')
+                        npy_dicts = []
+                        dat = dat[0]
+                        for row in range(dat.shape[0]):
+                            for col in range(dat.shape[1]): 
+                                npy_dicts.append({'row': ind_rows[col],
+                                                'col': ind_cols[col],
+                                                'index': index,
+                                                'doy': row+1,
+                                                'S2': dat[row,col]})
+                                
+                        npy_dict = pd.DataFrame(npy_dicts)
+                        npy_dict.to_parquet(outPath2, index=False)
 
 
 if clean_up:
