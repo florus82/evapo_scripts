@@ -1,7 +1,6 @@
 import sys
 sys.path.append('/home/potzschf/repos/')
 from helperToolz.helpsters import *
-# import packages 
 
 int_to_Month = {
     '01': 'January',
@@ -22,6 +21,8 @@ files = sorted(getFilelist('/data/Aldhani/eoagritwin/et/Sentinel3/raw', '.nc'))
 
 for year in [i for i in range(2017,2025,1)]:
 
+    print(f'Start processing .nc files for the year {year}')
+
     # get a subset of files for that year
     yearFiles = [file for file in files if int(file.split('/')[-1].split('_')[-1][0:4]) == year]
 
@@ -34,16 +35,22 @@ for year in [i for i in range(2017,2025,1)]:
     monthly_composites_path = f'{storPath}LST/monthly_composites/{year}/'
     os.makedirs(LST_path, exist_ok=True)
     os.makedirs(monthly_composites_path, exist_ok=True)
-    yearCont = []
-    # loop over files and export to .tif at location storPath
+    yearCont = []# for collecting number of observations per year
+
+    # loop over files and export to .tif at Path locations
     for i, file in enumerate(yearFiles):
-        print(file)
+        
+        print(f'start on file {file}')
+        
         accDateTimes = getAllDatesS3(file) # possible to take annual subset if entire files list would be passed here
     #     convertNCtoTIF(file, LST_path, file.split('/')[-1].split('.')[0] + '.tif', accDateTimes, False, True)
 
+
         dat = getDataFromNC(file)
-        monthCont = []
-        dailyCont = []
+        monthCont = [] # for collecting number of observations per month
+        dailyCont = [] # for collecting number of observations per day
+        dailyVals_median = [] # for collection the actual daily LST values (daily median)
+        dailyVals_mean = [] # for collection the actual daily LST values (daily mean)
         bnames = []
         df = pd.Series(accDateTimes)
         counts_per_day = df.dt.floor("D").value_counts().sort_index()
@@ -54,6 +61,8 @@ for year in [i for i in range(2017,2025,1)]:
         # cumulative_day_counts_start = np.array(cumulative_day_counts_start)
         # cumulative_day_counts_end = np.array(cumulative_day_counts_end)
 
+
+        ################################################ gives monthly min, max, median composites
         # aggreagate by median
         # stack_list = [
         #     np.nanmedian(dat[:, :, start:end], axis=2)
@@ -87,11 +96,32 @@ for year in [i for i in range(2017,2025,1)]:
         # fin_block[fin_block == 0] = np.nan
         # exportNCarrayDerivatesComp(file, monthly_composites_path, f'Germany_{year}_{MM}_max.tif', bands, fin_block)
 
+        ########################################################### creates metadata raster
         for l in range(len(counts_per_day)):
-            # monthCont.append(np.any(~np.isnan(dat[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]]),axis=2)) # minimum dail obs
-            dailyCont.append(np.sum(~np.isnan(dat[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]]),axis=2))
+            # number of observations per month
+            monthCont.append(np.any(~np.isnan(dat[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]]),axis=2)) # minimum dail obs
+            
+            # collect the dates to use as bandnames for exported tif stacks
             bnames.append(str(counts_per_day.index[l].date()))
+
+            # collect number of observations per day ( count only one per day!)
+            dailyCont.append(np.sum(~np.isnan(dat[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]]),axis=2))
+            
+            # collect actual LST values
+            dailyVals_median.append(np.nanmedian(dat[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]], axis = 2))
+            dailyVals_mean.append(np.nanmean(dat[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]], axis = 2))
+
+        # export daily values
+        exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_means_{year}_{MM}.tif', bnames, np.dstack(dailyVals_mean), make_uint16=False, numberOfBands=len(dailyVals_mean))
+        exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_medians_{year}_{MM}.tif', bnames, np.dstack(dailyVals_median), make_uint16=False, numberOfBands=len(dailyVals_median))
+
+        # export day counts
         exportNCarrayDerivatesInt(file, storPath + 'Analytics/Count_obs_per_day/', f'Daily_obs_for_{year}_{MM}.tif', bnames, np.dstack(dailyCont), True, numberOfBands=len(dailyCont))
-        # exportNCarrayDerivatesInt(file, storPath + 'Analytics/', f'Minimum_DailyObservations_{('_').join(file.split('_')[-1].split('-')[:2])}.tif', 'monthly_sum_of_daily_obs', np.nansum(np.dstack((monthCont)), axis = 2), True)
-        # yearCont.append(np.nansum(np.dstack((monthCont)), axis = 2))
-    # exportNCarrayDerivatesInt(file, storPath + 'Analytics/', f'Minimum_DailyObservations_{file.split('_')[-1].split('-')[0]}.tif', 'annual_sum_of_daily_obs', np.nansum(np.dstack((yearCont)), axis = 2), True)
+        # export month counts
+        exportNCarrayDerivatesInt(file, storPath + 'Analytics/Count_obs_per_month/', f'Monthly_Min_DailyObs_{('_').join(file.split('_')[-1].split('-')[:2])}.tif', 'monthly_sum_of_daily_obs', np.nansum(np.dstack((monthCont)), axis = 2), True)
+        
+        # collect number of observations per year ( count only one per day!)
+        yearCont.append(np.nansum(np.dstack((monthCont)), axis = 2))
+
+    # export year counts
+    exportNCarrayDerivatesInt(file, storPath + 'Analytics/Count_obs_per_year/', f'Annual_Min_DailyObs_{file.split('_')[-1].split('-')[0]}.tif', 'annual_sum_of_daily_obs', np.nansum(np.dstack((yearCont)), axis = 2), True)
