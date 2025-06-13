@@ -21,8 +21,6 @@ os.makedirs(temp, exist_ok=True)
 # read csv for valid row_cols for samples to draw. They are based on the share of agriculture (HR Landcover maps) within a S3 pixel
 thresh_csv = pd.read_csv(f'/data/{origin}et/Auxiliary/landcover/csv/row_cols.csv')
 
-
-
 ########################################## get the row_col combinations for thresholds of share of agriculture in pixel
 for col in thresh_csv.columns:
     #print(f'finding indices for {col}')
