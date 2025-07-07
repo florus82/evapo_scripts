@@ -111,7 +111,7 @@ Month_Int_to_Str = {'1': 'January',
                     '12': 'December'}
 
 # read csv for valid row_cols for samples to draw. They are based on the share of agriculture (HR Landcover maps) within a S3 pixel
-thresh_csv = pd.read_csv(f'/data/{origin}et/Auxiliary/landcover/csv/row_cols.csv')
+thresh_csv = pd.read_csv(f'/data/{origin}et/Auxiliary/landcover/csv/merge_filter/row_cols.csv')
 rowsL, colsL, indL = [], [], []
 for col in thresh_csv.columns:
     #print(f'finding indices for {col}')
@@ -128,16 +128,17 @@ def ModelRun():
     raw_files = getFilelist(f'/data/{origin}et/Training_ML/training_data/combined_extracts_monthly/', 'parquet')
     # subset by year
     for i in range(2017,2025,1):
+    #i = 'all'
         # subset by month
-        for j in range(3,10,1):
-            annual_files = pd.concat([pd.read_parquet(raw_file) for raw_file in raw_files if f'/{i}_' in raw_file and f'_{j}' in raw_file], ignore_index=True)
+        for j in range(7,9,1):
+            annual_files = pd.concat([pd.read_parquet(raw_file) for raw_file in raw_files if f'_{j}' in raw_file], ignore_index=True) # f'/{i}_' in raw_file and 
             # subset by agri-threshold
             for row, col, ind in zip(rowsL, colsL, indL):
                 if ind != 'Thresh100':
                     continue
                 sub_annual_files = subsetONThresh(row, col, annual_files)
                 # subset on metric
-                for metric in ['median']:#, 'mean']:
+                for metric in ['mean', 'median']:
                     print(f'Working on year: {i}, month: {Month_Int_to_Str[str(j)]}, {ind} and metric: {metric}')
                     if metric == 'median':
                         dropper = 'mean'
@@ -145,9 +146,9 @@ def ModelRun():
                         dropper = 'median'
                     
                     # set sample size & test_ratio & number of cores to use
-                    samp_size = 3000
-                    test_ratio = 0.66
-                    number_cores = 15
+                    samp_size = 15000
+                    test_ratio = 0.2
+                    number_cores = 40
 
                     # get sample size / 10 samples per decile of data
                     weights = getKDEweights(sub_annual_files[metric])
@@ -175,11 +176,11 @@ def ModelRun():
                         res['Train_size'].append(x_Train.shape[0])
                         res['Test_size'].append(x_Test.shape[0])
 
-                        stor = f'/data/Aldhani/eoagritwin/et/Training_ML/models/Iteration_{str(iteri)}_{metric}_{str(i)}_{Month_Int_to_Str[str(j)]}_{ind}.sav'
+                        stor = f'/data/Aldhani/eoagritwin/et/Training_ML/models/Run_01/Iteration_{str(iteri)}_{metric}_{str(i)}_{Month_Int_to_Str[str(j)]}_{ind}.sav'
                         ModPerfor(Model(y_Train, x_Train, stor, number_cores),
                                 y_Test, x_Test, res)
                         df = pd.DataFrame(data = res)
-                        df.to_csv(f'/data/Aldhani/eoagritwin/et/Training_ML/models/Iteration_{str(iteri)}_{metric}_{str(i)}_{Month_Int_to_Str[str(j)]}_{ind}.csv', sep=',', index=False)
+                        df.to_csv(f'/data/Aldhani/eoagritwin/et/Training_ML/output/Run_01/Iteration_{str(iteri)}_{metric}_{str(i)}_{Month_Int_to_Str[str(j)]}_{ind}.csv', sep=',', index=False)
                         print(iteri)
 
 

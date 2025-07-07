@@ -72,7 +72,7 @@ if do_S3:
                         monthi = month
                         break
                 print(f' work on {monthi}')
-                outPath1 = f'/data/{origin}et/Training_ML/training_data/S3_{year}_{month}_{metric}.parquet'
+                outPath1 = f'/data/{origin}et/Training_ML/training_data/raw_extracts/S3_{year}_{month}_{metric}.parquet'
 
                 if os.path.isfile(outPath1):
                     print(f'{outPath1} already exists - next file')
@@ -122,7 +122,7 @@ if do_S2:
                     print(f'nothing for S2 in {year} for index {index}')
                     continue
                 else:
-                    outPath2 = f'/data/{origin}et/Training_ML/training_data/S2_{year}_{index}.parquet'
+                    outPath2 = f'/data/{origin}et/Training_ML/training_data/raw_extracts/S2_{year}_{index}.parquet'
                     if os.path.isfile(outPath2):
                         print(f'file {outPath2.split('/')[-1]} already exists :) .... not doing it again')
                         continue
@@ -144,7 +144,7 @@ if do_S2:
 
 if clean_up:
     ########################################################################## clean-up Sentinel 3 (make months to single year files)
-    S3_files = [file for file in getFilelist(f'/data/{origin}et/Training_ML/training_data/', '.parquet') if 'S3' in file]
+    S3_files = [file for file in getFilelist(f'/data/{origin}et/Training_ML/training_data/raw_extracts/', '.parquet') if 'S3' in file]
     years = sorted(list(set([re.search(r'_(\d{4})_', S3_file).group(1) for S3_file in S3_files])))
     for year in years:
         for metric in metrics:
@@ -155,13 +155,13 @@ if clean_up:
             # load and merge them
             merged_files = pd.concat([pd.read_parquet(annual_file) for annual_file in annual_files], ignore_index=False)
             # export
-            merged_files.to_parquet(f'/data/{origin}et/Training_ML/training_data/S3_{year}_{metric}.parquet', index=False)
+            merged_files.to_parquet(f'/data/{origin}et/Training_ML/training_data/raw_extracts/S3_{year}_{metric}.parquet', index=False)
             _ = [os.remove(file) for file in annual_files]
 
 
 if clean_up_deep:
     ########################################################################## clean-up even further (drop metrices)
-    S3_files = [file for file in getFilelist(f'/data/{origin}et/Training_ML/training_data/', '.parquet') if 'S3' in file]
+    S3_files = [file for file in getFilelist(f'/data/{origin}et/Training_ML/training_data/raw_extracts/', '.parquet') if 'S3' in file]
     years = sorted(list(set([re.search(r'_(\d{4})_', S3_file).group(1) for S3_file in S3_files])))
     for year in years:
         # get files for one year and one metric
@@ -172,5 +172,5 @@ if clean_up_deep:
         
         merged_df = pd.merge(df1, df2, on=['row', 'col', 'doy'], how='left')
         # export
-        merged_df.to_parquet(f'/data/{origin}et/Training_ML/training_data/S3_{year}.parquet', index=False)
+        merged_df.to_parquet(f'/data/{origin}et/Training_ML/training_data/raw_extracts/S3_{year}.parquet', index=False)
         _ = [os.remove(file) for file in annual_files]
