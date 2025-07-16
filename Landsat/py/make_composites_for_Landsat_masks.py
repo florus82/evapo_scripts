@@ -63,7 +63,7 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
     #### do the compositing monthly
     for year in range(2024, 2017, -1):
         print(year)
-        outdir = f'/data/{origin}et/Landsat/composites/{state}/{year}'
+        outdir = f'/data/{origin}et/Landsat/composites/max/{state}/{year}'
         if os.path.exists(outdir):
             fList = getFilelist(outdir, '.tif')
             if len(fList) == 12:
@@ -86,7 +86,6 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
             year_month = lookUp.get_by_year_and_month(year, month)
             year_month_path_row = [scene for scene in year_month for pr in path_rows if pr in scene]
 
-   
 
             for landsat_file in year_month_path_row:
                 try:
@@ -135,8 +134,8 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
             for counti, xr_raster in enumerate(datasets):
                 src_ds = xarray_to_gdal_mem(xr_raster)
                 warped_ds = warp_to_template(src_ds, f'/data/{origin}et/Auxiliary/Landsat_GER_mask/states/{state}.tif', outType=gdal.GDT_Float32)
-                arr = warped_ds.GetRasterBand(1).ReadAsArray()
-                warped_arrays.append(arr)
+                # arr = warped_ds.GetRasterBand(1).ReadAsArray()
+                warped_arrays.append(warped_ds)#arr)
 
             warped_stack = np.dstack(warped_arrays)
             # makeTif_np_to_matching_tif(warped_stack, 
@@ -144,7 +143,7 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
             #                         f'/data/{origin}et/Landsat/stacks/ETA_{state}_{year}_{month:02d}_median.tif', 0, gdalType=gdal.GDT_Float32, bands=warped_stack.shape[2])
             warped_stack = warped_stack.astype(float)
             warped_stack[warped_stack == 0.0] = np.nan
-            median  = np.nanmedian(warped_stack, axis=2)
+            median  = np.nanmax(warped_stack, axis=2)
 
             # mask output
             mask_ds = gdal.Open(f'/data/{origin}et/Auxiliary/Landsat_GER_mask/states/{state}.tif')
@@ -153,4 +152,4 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
 
             makeTif_np_to_matching_tif(median_masked, 
                                         f'/data/{origin}et/Auxiliary/Landsat_GER_mask/states/{state}.tif',
-                                    f'{outdir}/Landsat_ETA_{state}_{year}_{month:02d}_median.tif', 0, gdalType=gdal.GDT_Float32)
+                                    f'{outdir}/Landsat_ETA_{state}_{year}_{month:02d}_max.tif', 0, gdalType=gdal.GDT_Float32)
