@@ -1,21 +1,7 @@
 import sys
 sys.path.append('/home/potzschf/repos/')
 from helperToolz.helpsters import *
-
-int_to_Month = {
-    '01': 'January',
-    '02': 'February',
-    '03': 'March',
-    '04': 'April',
-    '05': 'May',
-    '06': 'June',
-    '07': 'July',
-    '08': 'August',
-    '09': 'September',
-    '10': 'October',
-    '11': 'November',
-    '12': 'December'
-    }
+from helperToolz.dicts_and_lists import INT_TO_MONTH
 
 files = sorted(getFilelist('/data/Aldhani/eoagritwin/et/Sentinel3/raw', '.nc'))
 
@@ -32,7 +18,7 @@ for year in [i for i in range(2017,2025,1)]:
     # set storPath for exported tiffs
     storPath = '/data/Aldhani/eoagritwin/et/Sentinel3/tiffs/'
     LST_path = f'{storPath}LST/daily_observations_all/{year}/'
-    Time_path = f'{storPath}Acq_time/{year}/'
+    Time_path = f'{storPath}LST/Acq_time/int_format/{year}/'
     monthly_composites_path = f'{storPath}LST/monthly_composites/{year}/'
     # ensure that directories exist
     [os.makedirs(dir_path, exist_ok=True) for dir_path in [LST_path, Time_path, monthly_composites_path]]
@@ -48,7 +34,7 @@ for year in [i for i in range(2017,2025,1)]:
     #     convertNCtoTIF(file, LST_path, file.split('/')[-1].split('.')[0] + '.tif', accDateTimes, False, True)
 
 
-        dat = getDataFromNC(file)
+        dat = getDataFromNC_LST(file)
         monthCont = [] # for collecting number of observations per month
         dailyCont = [] # for collecting number of observations per day
         dailyVals_median = [] # for collection the actual daily LST values (daily median)
@@ -65,10 +51,11 @@ for year in [i for i in range(2017,2025,1)]:
         # cumulative_day_counts_end = np.array(cumulative_day_counts_end)
 
         # get accquisition times ready for aggregation and export
-        time_cube = np.full(dat.shape, None, dtype='float64')
+        time_cube = np.full(dat.shape, np.nan)#, dtype='float64')
         for i in range(len(df)):
             mask = ~np.isnan(dat[:,:,i])
-            time_cube[:,:,i][mask] = df[i].timestamp() # needed conversion as tif export won't work with datetimeobject
+            time_cube[:,:,i][mask] = convertTimestamp_to_INT(df[i])# df[i].timestamp() # needed conversion as tif export won't work with datetimeobject
+        # time_cube = np.where(time_cube == None, 'None', time_cube) # only needed to have dtype=str after running convertTimestamp_to_STR
         dailyTimeDates_max = []
         ################################################ gives monthly min, max, median composites
         # aggreagate by median
@@ -78,7 +65,7 @@ for year in [i for i in range(2017,2025,1)]:
         # ] 
         # fin_block = np.dstack(stack_list)
 
-        MM = int_to_Month[file.rsplit('-', maxsplit=1)[-1].split('.')[0]]
+        MM = INT_TO_MONTH[file.rsplit('-', maxsplit=1)[-1].split('.')[0]]
         # bands = [f'{MM}_Day_{b+1}' for b in range(fin_block.shape[2])]
         # fin_block = fin_block * mask[:, :, np.newaxis]
         # fin_block[fin_block == 0] = np.nan
@@ -127,7 +114,7 @@ for year in [i for i in range(2017,2025,1)]:
         # # export daily values
         # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_means_{year}_{MM}.tif', bnames, np.dstack(dailyVals_mean), make_uint16=False, numberOfBands=len(dailyVals_mean))
         # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_medians_{year}_{MM}.tif', bnames, np.dstack(dailyVals_median), make_uint16=False, numberOfBands=len(dailyVals_median))
-        exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_max_{year}_{MM}.tif', bnames, np.dstack(dailyVals_max), make_uint16=False, numberOfBands=len(dailyVals_max))
+        # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_max_{year}_{MM}.tif', bnames, np.dstack(dailyVals_max), make_uint16=False, numberOfBands=len(dailyVals_max))
         exportNCarrayDerivatesInt(file, Time_path, f'Daily_Time_max_{year}_{MM}.tif', bnames, np.dstack(dailyTimeDates_max), make_uint16=False, numberOfBands=len(dailyTimeDates_max))
         # # export day counts
         # exportNCarrayDerivatesInt(file, storPath + 'Analytics/Count_obs_per_day/', f'Daily_obs_for_{year}_{MM}.tif', bnames, np.dstack(dailyCont), True, numberOfBands=len(dailyCont))
