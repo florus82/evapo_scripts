@@ -51,11 +51,10 @@ for year in [i for i in range(2017,2025,1)]:
         # cumulative_day_counts_end = np.array(cumulative_day_counts_end)
 
         # get accquisition times ready for aggregation and export
-        time_cube = np.full(dat.shape, np.nan)#, dtype='float64')
+        time_cube = np.full(dat.shape, 0, dtype='uint64')
         for i in range(len(df)):
             mask = ~np.isnan(dat[:,:,i])
-            time_cube[:,:,i][mask] = convertTimestamp_to_INT(df[i])# df[i].timestamp() # needed conversion as tif export won't work with datetimeobject
-        # time_cube = np.where(time_cube == None, 'None', time_cube) # only needed to have dtype=str after running convertTimestamp_to_STR
+            time_cube[:,:,i][mask] = int(pd.Timestamp(df[i]).strftime('%Y%m%d%H%M%S'))#df[i].timestamp() #needed conversion as tif export won't work with datetimeobject     
         dailyTimeDates_max = []
         ################################################ gives monthly min, max, median composites
         # aggreagate by median
@@ -115,7 +114,7 @@ for year in [i for i in range(2017,2025,1)]:
         # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_means_{year}_{MM}.tif', bnames, np.dstack(dailyVals_mean), make_uint16=False, numberOfBands=len(dailyVals_mean))
         # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_medians_{year}_{MM}.tif', bnames, np.dstack(dailyVals_median), make_uint16=False, numberOfBands=len(dailyVals_median))
         # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_max_{year}_{MM}.tif', bnames, np.dstack(dailyVals_max), make_uint16=False, numberOfBands=len(dailyVals_max))
-        exportNCarrayDerivatesInt(file, Time_path, f'Daily_Time_max_{year}_{MM}.tif', bnames, np.dstack(dailyTimeDates_max), make_uint16=False, numberOfBands=len(dailyTimeDates_max))
+        exportNCarrayDerivatesInt(file, Time_path, f'Daily_Time_max_{year}_{MM}.tif', bnames, np.dstack(dailyTimeDates_max), datType=gdal.GDT_UInt64, numberOfBands=len(dailyTimeDates_max), noData=0)
         # # export day counts
         # exportNCarrayDerivatesInt(file, storPath + 'Analytics/Count_obs_per_day/', f'Daily_obs_for_{year}_{MM}.tif', bnames, np.dstack(dailyCont), True, numberOfBands=len(dailyCont))
         # # export month counts
