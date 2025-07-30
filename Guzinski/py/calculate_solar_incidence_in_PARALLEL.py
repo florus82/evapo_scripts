@@ -1,12 +1,13 @@
 import sys
 import rasterio
 from datetime import datetime
+import time
 from pvlib import solarposition
 sys.path.append('/home/potzschf/repos/')
 from helperToolz.helpsters import *
 from joblib import Parallel, delayed
-
-
+from shapely.geometry import Point
+import geopandas as gpd
 
 def calc_Incidence_per_tile(tile, year):
 
@@ -16,8 +17,8 @@ def calc_Incidence_per_tile(tile, year):
     dem_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/DEM/DEM_{tile}.tif'
     lat_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/LAT/Latitude_{tile}.tif'
     lon_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/LON/Longitude_{tile}.tif'
-    acq_time_list = getFilelist(f'/data/Aldhani/eoagritwin/et/Sentinel3/tiffs/Acq_time/{year}', '.tif')
-    stor_dir = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/{tile}/{year}/'
+    acq_time_list = getFilelist(f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/int_format/{year}', '.tif')
+    stor_dir = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/minVZA/{year}/{tile}/'
 
     os.makedirs(stor_dir, exist_ok=True)
 
@@ -91,8 +92,19 @@ def calc_Incidence_per_tile(tile, year):
                         gt = ds.GetGeoTransform()
                         prj = ds.GetProjection()
 
-                        export_intermediate_products('0_0', incidence_angle, gt, prj, stor_dir, f'INCIDENCE_{tile}_{year}_{month}_{(day+1):02d}.tif',typ='float')
+                        # export npz dump
+                        # np.savez_compressed(f'{stor_dir}INCIDENCE_{tile}_{year}_{month}_{(day+1):02d}.npz', incidence_angle=incidence_angle) # np.load("incidence_angle.npz")['incidence_angle']
+                        # df = pd.DataFrame({'incidence_angle': incidence_angle.ravel()})
+                        # df.to_parquet(f'{stor_dir}INCIDENCE_{tile}_{year}_{month}_{(day+1):02d}.parquet', index=False)
+                        # np.save(f'{stor_dir}SHAPE_{tile}_{year}_{month}_{(day+1):02d}.npy', original_shape)
+
+                        export_intermediate_products('0_0',
+                                                     incidence_angle, gt, prj, stor_dir,
+                                                     f'INCIDENCE_{tile}_{year}_{month}_{(day+1):02d}.tif',typ='float',
+                                                     comp=True)
+                        
                         print('export done!')
+
                     except Exception as e:
                             print(e)
                             t = time.localtime()
@@ -104,18 +116,18 @@ def calc_Incidence_per_tile(tile, year):
             # print(f'{month} is not needed at the moment')
 
 
-ncores = 10
+ncores = 75
 year = 2019
 
 tiles = [file.split('SLOPE_')[-1].split('.')[0] for file in getFilelist('/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/SLOPE/', '.tif')]
 
 # filter for tiles that have already been processed completely
-tiles2 = [tile for tile in tiles if len(getFilelist(f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/{tile}/{year}/', '.tif')) != 214]
+# tiles2 = [tile for tile in tiles if len(getFilelist(f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/minVZA/{year}/{tile}/', '.tif')) != 214]
+# jobs = [[tiles2[i], 2019]  for i in range(len(tiles2))]
+# print(f'\n{len(tiles2)} tiles will be processed\n')
 
-jobs = [[tiles2[i], 2019]  for i in range(len(tiles2))]
-
-print(f'\n{len(tiles2)} tiles will be processed\n')
-
+jobs = [[tiles[i], 2019]  for i in range(len(tiles))]
+print(f'\n{len(tiles)} tiles will be processed\n')
 
 
 ###### needed to initiate while to run forever until every files were calculated (needed due to weird multiply overflow error)
@@ -127,15 +139,15 @@ if __name__ == '__main__':
     print("--------------------------------------------------------")
     print("Starting process, time:" + starttime)
     print("")
-    while len(bad_tiles) > 0 :
-        Parallel(n_jobs=ncores)(delayed(calc_Incidence_per_tile)(i[0], i[1]) for i in jobs)
-        base_path = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/'
-        tiles = get_forceTSI_output_Tiles(getFilelist(base_path, '.tif', deep=True))
-        bad_tiles = []
-        for tile in tiles:
-            t_len = len(getFilelist(f'{base_path}{tile}/{year}', '.tif'))
-            if t_len != 214: # arbitrary value, number of files for April - October
-                bad_tiles.append(tile)
+    # while len(bad_tiles) > 0 :
+    Parallel(n_jobs=ncores)(delayed(calc_Incidence_per_tile)(i[0], i[1]) for i in jobs)
+        # base_path = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/'
+        # tiles = get_forceTSI_output_Tiles(getFilelist(base_path, '.tif', deep=True))
+        # bad_tiles = []
+        # for tile in tiles:
+        #     t_len = len(getFilelist(f'{base_path}{tile}/{year}', '.tif'))
+        #     if t_len != 214: # arbitrary value, number of files for April - October
+        #         bad_tiles.append(tile)
 
     print("")
     endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())

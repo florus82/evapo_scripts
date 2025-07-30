@@ -1,6 +1,7 @@
 import sys
 import rasterio
 from datetime import datetime
+import time
 from pvlib import solarposition
 sys.path.append('/home/potzschf/repos/')
 from helperToolz.helpsters import *
@@ -23,33 +24,34 @@ for year in [2019]:# range(2017, 2025, 1):
 
         os.makedirs(stor_dir, exist_ok=True)
 
+         # load all data and convert if needed
+        with rasterio.open(slope_path) as slope_src:
+            slope = slope_src.read(1)  # Read first band
+            
+        with rasterio.open(aspect_path) as aspect_src:
+            aspect = aspect_src.read(1)
+
+        with rasterio.open(lon_path) as lon_src:
+            lon = lon_src.read(1)
+
+        with rasterio.open(lat_path) as lat_src:
+            lat = lat_src.read(1)
+
+        with rasterio.open(dem_path) as dem_src:
+            dem = dem_src.read(1)
+
+        # Replace no data or negative values with nan if needed
+        slope = np.where(slope < 0, np.nan, slope)
+        aspect = np.where(aspect < 0, np.nan, aspect)
+
+        # Convert degrees to radians for trigonometric calculations
+        slope_rad = np.deg2rad(slope)
+        aspect_rad = np.deg2rad(aspect)
+        
         for file in acq_time_list:
             month = file.split('.tif')[0].split('_')[-1]
             if month in ['April', 'May', 'June', 'July', 'August', 'September', 'October']:
-                # load all data and convert if needed
-                with rasterio.open(slope_path) as slope_src:
-                    slope = slope_src.read(1)  # Read first band
-                    
-                with rasterio.open(aspect_path) as aspect_src:
-                    aspect = aspect_src.read(1)
-
-                with rasterio.open(lon_path) as lon_src:
-                    lon = lon_src.read(1)
-
-                with rasterio.open(lat_path) as lat_src:
-                    lat = lat_src.read(1)
-
-                with rasterio.open(dem_path) as dem_src:
-                    dem = dem_src.read(1)
-
-                # Replace no data or negative values with nan if needed
-                slope = np.where(slope < 0, np.nan, slope)
-                aspect = np.where(aspect < 0, np.nan, aspect)
-
-                # Convert degrees to radians for trigonometric calculations
-                slope_rad = np.deg2rad(slope)
-                aspect_rad = np.deg2rad(aspect)
-
+               
                 # warp S3 dates into tile and read-in
                 warped_ds = warp_raster_to_reference(file, reference_path=slope_path, output_path='MEM', resampling='near')
                 days = warped_ds.RasterCount
@@ -80,8 +82,7 @@ for year in [2019]:# range(2017, 2025, 1):
                             zenith_rad = np.deg2rad(solpos['zenith'].values).reshape(time_warp.shape)
                             azimuth_rad = np.deg2rad(solpos['azimuth'].values).reshape(time_warp.shape)
 
-                            # cos(theta_i) = cos(theta_z)*cos(beta) + sin(theta_z)*sin(beta)*cos(gamma_s - gamma)
-
+                            # correct for solar incidence angle
                             cos_theta_i = (np.cos(zenith_rad) * np.cos(slope_rad) +
                                         np.sin(zenith_rad) * np.sin(slope_rad) * 
                                         np.cos(azimuth_rad - aspect_rad))

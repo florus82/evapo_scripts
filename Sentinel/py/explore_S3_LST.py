@@ -3,9 +3,9 @@ sys.path.append('/home/potzschf/repos/')
 from helperToolz.helpsters import *
 from helperToolz.dicts_and_lists import INT_TO_MONTH
 
-files = sorted(getFilelist('/data/Aldhani/eoagritwin/et/Sentinel3/raw', '.nc'))
+files = sorted(getFilelist('/data/Aldhani/eoagritwin/et/Sentinel3/raw_LST', '.nc'))
 
-for year in [i for i in range(2017,2025,1)]:
+for year in [2019]:#[i for i in range(2017,2025,1)]:
 
     print(f'Start processing .nc files for the year {year}')
 
@@ -31,7 +31,7 @@ for year in [i for i in range(2017,2025,1)]:
         print(f'start on file {file}')
         
         accDateTimes = getAllDatesS3(file) # possible to take annual subset if entire files list would be passed here
-    #     convertNCtoTIF(file, LST_path, file.split('/')[-1].split('.')[0] + '.tif', accDateTimes, False, True)
+        convertNCtoTIF(file, LST_path, file.split('/')[-1].split('.')[0] + '.tif', accDateTimes, False, True)
 
 
         dat = getDataFromNC_LST(file)
@@ -54,7 +54,7 @@ for year in [i for i in range(2017,2025,1)]:
         time_cube = np.full(dat.shape, 0, dtype='uint64')
         for i in range(len(df)):
             mask = ~np.isnan(dat[:,:,i])
-            time_cube[:,:,i][mask] = int(pd.Timestamp(df[i]).strftime('%Y%m%d%H%M%S'))#df[i].timestamp() #needed conversion as tif export won't work with datetimeobject     
+            time_cube[:,:,i][mask] = int(pd.Timestamp(df[i]).strftime('%H%M'))#%Y%m%d#df[i].timestamp() #needed conversion as tif export won't work with datetimeobject     
         dailyTimeDates_max = []
         ################################################ gives monthly min, max, median composites
         # aggreagate by median
@@ -114,7 +114,7 @@ for year in [i for i in range(2017,2025,1)]:
         # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_means_{year}_{MM}.tif', bnames, np.dstack(dailyVals_mean), make_uint16=False, numberOfBands=len(dailyVals_mean))
         # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_medians_{year}_{MM}.tif', bnames, np.dstack(dailyVals_median), make_uint16=False, numberOfBands=len(dailyVals_median))
         # exportNCarrayDerivatesInt(file, LST_path, f'Daily_LST_max_{year}_{MM}.tif', bnames, np.dstack(dailyVals_max), make_uint16=False, numberOfBands=len(dailyVals_max))
-        exportNCarrayDerivatesInt(file, Time_path, f'Daily_Time_max_{year}_{MM}.tif', bnames, np.dstack(dailyTimeDates_max), datType=gdal.GDT_UInt64, numberOfBands=len(dailyTimeDates_max), noData=0)
+        # exportNCarrayDerivatesInt(file, Time_path, f'Daily_Time_max_{year}_{MM}.tif', bnames, np.dstack(dailyTimeDates_max), datType=gdal.GDT_UInt64, numberOfBands=len(dailyTimeDates_max), noData=0)
         # # export day counts
         # exportNCarrayDerivatesInt(file, storPath + 'Analytics/Count_obs_per_day/', f'Daily_obs_for_{year}_{MM}.tif', bnames, np.dstack(dailyCont), True, numberOfBands=len(dailyCont))
         # # export month counts

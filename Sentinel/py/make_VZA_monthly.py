@@ -1,4 +1,5 @@
 import sys
+import time
 sys.path.append('/home/potzschf/repos/')
 from helperToolz.helpsters import *
 
@@ -8,7 +9,7 @@ from helperToolz.helpsters import *
 files = sorted(getFilelist('/data/Aldhani/eoagritwin/et/Sentinel3/VZA/raw', '.nc'))
 
 for year in [i for i in range(2017,2025,1)]:
-    outPath = f'/data/Aldhani/eoagritwin/et/Sentinel3/VZA/monthly_tiff_masks/{year}/'
+    outPath = f'/data/Aldhani/eoagritwin/et/Sentinel3/VZA/monthly_tiff_values/{year}/'
     os.makedirs(outPath, exist_ok=True) 
 
     # get a subset of files for that year
@@ -33,12 +34,13 @@ for year in [i for i in range(2017,2025,1)]:
                     bnames.append(str(accDateTimes[l].astype('datetime64[s]')))
 
             block = np.dstack(monthL)
-            block[np.isnan(block)] = 50
-            block2 = np.where(block > 45, 0, 1)
-            block3 = block2.astype(np.int8)
+            # block[np.isnan(block)] = 50
+            # block2 = np.where(block > 45, 0, 1)
+            # block3 = block2.astype(np.int8)
 
             exportNCarrayDerivatesInt(file, outPath,
                                     filename,
-                                    bnames, block3,
-                                    datType=gdal.GDT_Int8,
+                                    bnames,
+                                    block, #block3,
+                                    #datType=gdal.GDT_Int8,
                                     numberOfBands=block.shape[2])
