@@ -17,8 +17,11 @@ def calc_Incidence_per_tile(tile, year):
     dem_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/DEM/DEM_{tile}.tif'
     lat_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/LAT/Latitude_{tile}.tif'
     lon_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/LON/Longitude_{tile}.tif'
-    acq_time_list = getFilelist(f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/int_format/{year}', '.tif')
-    stor_dir = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/minVZA/{year}/{tile}/'
+    acq_times = getFilelist(f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/int_format/{year}', '.tif')
+    # acq_time_list = [file for file in acq_times if not any(substr in file for substr in ['readable', 'maxLST'])]
+    # stor_dir = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/minVZA/{year}/{tile}/'
+    acq_time_list = [file for file in acq_times if not any(substr in file for substr in ['readable', 'minVZA'])]
+    stor_dir = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/maxLST/{year}/{tile}/'
 
     os.makedirs(stor_dir, exist_ok=True)
 
@@ -122,7 +125,7 @@ year = 2019
 tiles = [file.split('SLOPE_')[-1].split('.')[0] for file in getFilelist('/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/SLOPE/', '.tif')]
 
 # filter for tiles that have already been processed completely
-# tiles2 = [tile for tile in tiles if len(getFilelist(f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/minVZA/{year}/{tile}/', '.tif')) != 214]
+# tiles2 = [tile for tile in tiles if len(getFilelist(f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/maxLST/{year}/{tile}/', '.tif')) != 214]
 # jobs = [[tiles2[i], 2019]  for i in range(len(tiles2))]
 # print(f'\n{len(tiles2)} tiles will be processed\n')
 
@@ -141,11 +144,11 @@ if __name__ == '__main__':
     print("")
     # while len(bad_tiles) > 0 :
     Parallel(n_jobs=ncores)(delayed(calc_Incidence_per_tile)(i[0], i[1]) for i in jobs)
-        # base_path = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/'
+        # base_path = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/minVZA/'
         # tiles = get_forceTSI_output_Tiles(getFilelist(base_path, '.tif', deep=True))
         # bad_tiles = []
         # for tile in tiles:
-        #     t_len = len(getFilelist(f'{base_path}{tile}/{year}', '.tif'))
+        #     t_len = len(getFilelist(f'{base_path}{year}/{tile}/', '.tif'))
         #     if t_len != 214: # arbitrary value, number of files for April - October
         #         bad_tiles.append(tile)
 

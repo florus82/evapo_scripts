@@ -28,8 +28,10 @@ for variable in ['2m_temperature']:
                 # make folder to store data and subset files only to growing season
                 outDir = f'{storPath}{'low_res'}/{variable}/{year}/'
                 os.makedirs(outDir, exist_ok=True)
-                month = INT_TO_MONTH[f'{int(file.split('_')[-1].split('.')[0]):02d}']
-                if month in ['March', 'April', 'May', 'June', 'July', 'August', 'September', 'October']:
+                
+                m = int(file.split('_')[-1].split('.')[0])
+                if growingSeasonChecker(m):
+                    month = INT_TO_MONTH[f'{m:02d}']
                     outPath = f'{outDir}{variable}_{'low_res'}_{year}_{month}.tif'
                     if os.path.exists(outPath):
                         print(f'{variable} already processes for {month}/{year}')
@@ -37,7 +39,7 @@ for variable in ['2m_temperature']:
                     else:
                         warp_ERA5_to_reference(file, dummy_path, outPath, sharp_DEM=dem_path,
                                                sharp_geopot=geopot_path,
-                                               sharp_blendheight=100, sharp_rate=MOIST_ADIABAT)
+                                               sharp_blendheight=100, sharp_rate=STANDARD_ADIABAT)
     
     else:
         files = [file for file in getFilelist(os.path.join(base_path, variable), '.grib')]
