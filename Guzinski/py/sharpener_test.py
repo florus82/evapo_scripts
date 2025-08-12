@@ -21,8 +21,6 @@ temp_dump = '/data/Aldhani/eoagritwin/et/Sentinel3//LST/LST_values/tempDump/'
 tiles_to_process = createFORCEtileLIST(list(bran['Tile_X']),
                                         list(bran['Tile_Y']))
 
-tiles_to_process = createFORCEtileLIST([58, 59, 58, 59],
-                                       [33, 34, 34, 34])
 
 # tiles_to_process = get_forceTSI_output_Tiles(getFilelist(path_to_slope, '.tif'))
 
@@ -51,10 +49,9 @@ for year in [2019]:#range(2017,2025):
     path_to_S2_tiles = f'/data/Aldhani/eoagritwin/force/output/Guzinski/{year}/'
     
 
-
     ##### which tiles should be processed
     # get a list with all available tiles
-    files = getFilelist(f'{path_to_S2_tiles}/tiles', '.tif', deep=True) 
+    files = getFilelist(f'{path_to_S2_tiles}tiles', '.tif', deep=True) 
     files = [file for file in files if any(tile in file for tile in tiles_to_process)]
     date_list = check_forceTSI_compositionDates(files)
 
@@ -131,69 +128,70 @@ for year in [2019]:#range(2017,2025):
                 else:
                     raise ValueError('Something is seriously wrong with the alignment of LST and incidence dates!!!!!')
                 
-                movWin = 40
-                cv = 25
-                highResFilename = highRes_path
-                lowResFilename = lowRes_path
-                outputFilename = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened/germany/{comp_stat}_mvwin{movWin}_cv{cv}_{lowRes_path.split('_LST_')[-1]}'
 
+                for movWin in range(10,55,10):
+                    for cv in range(5,55,10):
+                        for regrat in [0.1, 0.2, 0.3]:
+                            highResFilename = highRes_path
+                            lowResFilename = lowRes_path
+                            outputFilename = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened/{comp_stat}_{year}_{month}_{lowRes_path.split(f'{month}_')[-1].split('.')[0]}_mvwin{movWin}_cv{cv}_regrat{regrat}.tif'
 
-                useDecisionTree = True
+                            useDecisionTree = True
 
-                commonOpts = {"highResFiles":               [highResFilename],
-                                "lowResFiles":              [lowResFilename],
-                                "lowResQualityFiles":         [],# [lowResMaskFilename],
-                                "lowResGoodQualityFlags":     [],#[255],
-                                "cvHomogeneityThreshold":     cv,
-                                "movingWindowSize":           movWin,
-                                "disaggregatingTemperature":  True}
-                dtOpts =     {"perLeafLinearRegression":    True,
-                                "linearRegressionExtrapolationRatio": 0.25}
-                sknnOpts =   {'hidden_layer_sizes':         (10,),
-                                'activation':                 'tanh'}
-                nnOpts =     {"regressionType":             REG_sklearn_ann,
-                                "regressorOpt":               sknnOpts}
+                            commonOpts = {"highResFiles":               [highResFilename],
+                                            "lowResFiles":              [lowResFilename],
+                                            "lowResQualityFiles":         [],# [lowResMaskFilename],
+                                            "lowResGoodQualityFlags":     [],#[255],
+                                            "cvHomogeneityThreshold":     cv,
+                                            "movingWindowSize":           movWin,
+                                            "disaggregatingTemperature":  True}
+                            dtOpts =     {"perLeafLinearRegression":    True,
+                                            "linearRegressionExtrapolationRatio": round(regrat, 2)}
+                            sknnOpts =   {'hidden_layer_sizes':         (10,),
+                                            'activation':                 'tanh'}
+                            nnOpts =     {"regressionType":             REG_sklearn_ann,
+                                            "regressorOpt":               sknnOpts}
 
-                start_time = time.time()
+                            start_time = time.time()
 
-                if useDecisionTree:
-                    opts = commonOpts.copy()
-                    opts.update(dtOpts)
-                    disaggregator = DecisionTreeSharpener(**opts)
-                else:
-                    opts = commonOpts.copy()
-                    opts.update(nnOpts)
-                    disaggregator = NeuralNetworkSharpener(**opts)
+                            if useDecisionTree:
+                                opts = commonOpts.copy()
+                                opts.update(dtOpts)
+                                disaggregator = DecisionTreeSharpener(**opts)
+                            else:
+                                opts = commonOpts.copy()
+                                opts.update(nnOpts)
+                                disaggregator = NeuralNetworkSharpener(**opts)
 
-                print("Training regressor...")
-                disaggregator.trainSharpener()
-                print("Sharpening...")
-                downscaledFile = disaggregator.applySharpener(highResFilename, lowResFilename)
-                print("Residual analysis...")
-                residualImage, correctedImage = disaggregator.residualAnalysis(downscaledFile, lowResFilename,
-                                                                            # lowResMaskFilename,
-                                                                                doCorrection=True)
-                print("Saving output...")
-                highResFile = gdal.Open(highResFilename)
-                if correctedImage is not None:
-                    outImage = correctedImage
-                else:
-                    outImage = downscaledFile
-                # outData = utils.binomialSmoother(outData)
-                outFile = utils.saveImg(outImage.GetRasterBand(1).ReadAsArray(),
-                                        outImage.GetGeoTransform(),
-                                        outImage.GetProjection(),
-                                        outputFilename)
-                residualFile = utils.saveImg(residualImage.GetRasterBand(1).ReadAsArray(),
-                                            residualImage.GetGeoTransform(),
-                                            residualImage.GetProjection(),
-                                            os.path.splitext(outputFilename)[0] + "_residual" +
-                                            os.path.splitext(outputFilename)[1])
+                            print("Training regressor...")
+                            disaggregator.trainSharpener()
+                            print("Sharpening...")
+                            downscaledFile = disaggregator.applySharpener(highResFilename, lowResFilename)
+                            print("Residual analysis...")
+                            residualImage, correctedImage = disaggregator.residualAnalysis(downscaledFile, lowResFilename,
+                                                                                        # lowResMaskFilename,
+                                                                                            doCorrection=True)
+                            print("Saving output...")
+                            highResFile = gdal.Open(highResFilename)
+                            if correctedImage is not None:
+                                outImage = correctedImage
+                            else:
+                                outImage = downscaledFile
+                            # outData = utils.binomialSmoother(outData)
+                            outFile = utils.saveImg(outImage.GetRasterBand(1).ReadAsArray(),
+                                                    outImage.GetGeoTransform(),
+                                                    outImage.GetProjection(),
+                                                    outputFilename)
+                            residualFile = utils.saveImg(residualImage.GetRasterBand(1).ReadAsArray(),
+                                                        residualImage.GetGeoTransform(),
+                                                        residualImage.GetProjection(),
+                                                        os.path.splitext(outputFilename)[0] + "_residual" +
+                                                        os.path.splitext(outputFilename)[1])
 
-                outFile = None
-                residualFile = None
-                downsaceldFile = None
-                highResFile = None
+                            outFile = None
+                            residualFile = None
+                            downsaceldFile = None
+                            highResFile = None
 
-                print(time.time() - start_time, "seconds")
+                            print(time.time() - start_time, "seconds")
 

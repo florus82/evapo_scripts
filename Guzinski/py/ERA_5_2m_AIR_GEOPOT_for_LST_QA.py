@@ -50,4 +50,4 @@ for variable in ['2m_temperature']:
             print(f'{variable} already processes')
             continue
         else:
-            warp_ERA5_to_reference(files[0], dummy_path, outPath, single=True)
+            warp_ERA5_to_reference(files[0], dummy_path, outPath, bandL=[1])
