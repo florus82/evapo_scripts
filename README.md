@@ -28,8 +28,6 @@ sharpen LST (LST ~ S2,slope,aspect,incidence) # WE NEED MASKS for LC that we don
                     implementation, as well as warp_at_doy needed adaptation to a) get the bands b) loop differently over bands???)
   --> not load all the tifs (slope, aspect, lat, lon, dem) for germany, but use the .vrt files created during the sharpening process
           --> does not save a lot, as they are only needed for the correction of ssrd
-              --> the real saver would be to subset the warping of that spatially
-
 
 
 
@@ -37,3 +35,8 @@ sharpen LST (LST ~ S2,slope,aspect,incidence) # WE NEED MASKS for LC that we don
  - output only for warped, not doy so far
  - when sharping to 
 
+
+# ein model pro lst observation und dann mit allen (?) den Tag vorhersagen: immer noch das Problem der Uhrzeiten --> vielleicht ein min/max Uhrzeit threshold?
+# incidence raus und testen: um die LST Pixel hoffentlich im sharpened image um eliminieren, bzw. zu minimieren (da ja das compositing Problem noch besteht)
+# anderes compositing --> bis jetzt minVZA und maxLST (+o°C Threshold, und) --> das vorhandene compositing nochmal richtig prüfen!!!
+# ssrd tuning --> zum einen das warpen in den Griff bekommen, zum anderen die Values checken --> formeln nochmals richtig durchgehen
