@@ -82,6 +82,10 @@ path_to_agro = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/THUENEN_20
 Tile_X = [63,64,63,64]
 Tile_Y = [41,41,42,42]
 
+Tile_X = [71]
+Tile_Y = [44]
+
+
 tiles_to_process = createFORCEtileLIST(Tile_X, Tile_Y)
 
 # make a specific folder for this run and store the info together
@@ -227,9 +231,9 @@ for idx, highResFilename in enumerate(highRes_files):
     for maskname, mask_lowRes in zip(['withoutLSTmask', 'withLSTmask'], ['', lowmask_bin_path]):
         lowResMaskFilename = mask_lowRes
         f2 = f'{f1}{maskname}/'
-        for movWin in range(15,60,10):
-            for cv in range(5,55,10):
-                for regrat in [0.1, 0.2, 0.3]:
+        for movWin in range(15,30,5):
+            for cv in range(15,30,5):
+                for regrat in [0.2]:
                     kombi = f'mvwin{movWin}_cv{cv}_regrat{int(regrat*100):02d}_{highRes_names[idx]}_{maskname}'
                     f3 = f'{f2}{highRes_names[idx]}/'
                     os.makedirs(f'{f3}Residuals/', exist_ok=True)

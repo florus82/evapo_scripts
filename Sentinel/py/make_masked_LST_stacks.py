@@ -15,6 +15,8 @@ AcqTime_stor_path = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_ti
 AirTemp_path = '/data/Aldhani/eoagritwin/et/Auxiliary/ERA5/tiff/low_res/2m_temperature/'
 
 for year in [2019]:
+
+    # set storage paths to the current year
     LST_stor_Path_minVZA_year = f'{LST_stor_Path_minVZA}{year}/'
     LST_stor_Path_maxLST_year = f'{LST_stor_Path_maxLST}{year}/' 
 
@@ -23,10 +25,11 @@ for year in [2019]:
 
     AcqTime_stor_path_year = f'{AcqTime_stor_path}{year}/'
 
+    # make paths if they don't exist
     [os.makedirs(path, exist_ok=True) for path in [LST_stor_Path_minVZA_year, LST_stor_Path_maxLST_year,
                                                    AcqTime_stor_path_year, VZA_stor_Path_maxLST_year, VZA_stor_Path_minVZA_year]]
 
-    # get a subset of LST and VZA files for that year
+    # get a temporal subset of LST, VZA and air temp files for that year
     files = sorted(getFilelist(LST_path, '.nc'))
     yearFiles_LST = [file for file in sorted(getFilelist(LST_path, '.nc')) if int(file.split('/')[-1].split('_')[-1][0:4]) == year]
     yearFiles_VZA = getFilelist(f'{VZA_path}{year}/', 'tif')
@@ -34,6 +37,7 @@ for year in [2019]:
 
     # loop over files and export to .tif at Path locations
     for month in [f'{i:02d}' for i in range(1,13)]:
+        
         if growingSeasonChecker(int(month)):
             
             # subset LST to month and get acquisition time and calculate observations per day
@@ -45,7 +49,7 @@ for year in [2019]:
             cumulative_day_counts_end = np.asarray(np.cumsum(counts_per_day))
             cumulative_day_counts_start = np.insert(cumulative_day_counts_end, 0 ,0)
 
-            # load data
+            # load data (/all observations for that month)
             dat_LST = getDataFromNC_LST(file_LST)
             
             # apply the temperature threshold
@@ -72,7 +76,7 @@ for year in [2019]:
                             minutes.append(pd.Timestamp(accDT).minute)
                 bands_up = [band + 1 for band in bands_low]# this get the hourly value after the acquisition
 
-                # interpolate
+                # interpolate to the minute of observation
                 air_temp_intpol = dat_2mT[:,:,bands_low] - (dat_2mT[:,:,bands_low] - dat_2mT[:,:,bands_up]) * (np.array(minutes, dtype=np.float32) / 60).reshape(1,1,-1)
 
                 # apply air threshold

@@ -7,7 +7,8 @@ client = cdsapi.Client()
 
 dataset = "reanalysis-era5-single-levels"
 
-variables = ["2m_dewpoint_temperature", # vapor pressure
+variables = [             
+        "2m_dewpoint_temperature", # vapor pressure
         "2m_temperature",
         "surface_pressure",
         "100m_u_component_of_wind",

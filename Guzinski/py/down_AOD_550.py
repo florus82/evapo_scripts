@@ -32,7 +32,7 @@ while dates:
     for date in dates[:]:  # Iterates over a copy of the list to allow removal at the end without messing up the order
 
             #storPath = f"/data/Aldhani/eoagritwin/et/Auxiliary/AOT_550/raw/Germany_{('-').join(date[0].split('-')[:2])}.nc"
-            storPath = f"/data/Aldhani/eoagritwin/et/Auxiliary/AOT_550/raw/Germany_{date[0]}.nc"
+            storPath = f"/data/Aldhani/eoagritwin/et/Auxiliary/AOD_550/raw/Germany_{date[0]}.nc"
             print(storPath)
             
             if os.path.exists(storPath):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import sys
@@ -25,21 +25,21 @@ import rasterio
 # this might dock onto the sharpener process??
 
 
-# In[2]:
+# In[ ]:
 
 
 # set the year, month and day to estimate evapotranspiration for
 year = 2019
 month = 'July'
-day = 1
+day = 4
 comp = 'minVZA'
 
 # set output path
 tempOut = '/data/Aldhani/eoagritwin/et/Auxiliary/trash/'
 
 # set the parameters from sharpener
-mvwin = 35
-cv = 25
+mvwin = 20
+cv = 20
 regrat = 20
 s2_masked = False
 lst_masked = False
@@ -59,8 +59,8 @@ era5_path = '/data/Aldhani/eoagritwin/et/Auxiliary/ERA5/grib/'
 ssrd_mean_path = '/data/Aldhani/eoagritwin/et/Auxiliary/ERA5/ssrd_mean_calc/'
 
 # path_base to sharpenend folder and S2_comp
-sharp_pathbase = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened/2514b73c638b86ba52047c6c65eea221652398b499d492380209a557c938f1ba/{comp}/{year}/{month}/{day:02d}/{lstMask}/{s2Mask}/Values/'
-s2_pathbase = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/tempDump/2514b73c638b86ba52047c6c65eea221652398b499d492380209a557c938f1ba/'
+sharp_pathbase = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened/c598d460faca5f3a37f77c198d79fd7dd6c29d0aaf61d416ed5c57939ba23174/{comp}/{year}/{month}/{day:02d}/{lstMask}/{s2Mask}/Values/'
+s2_pathbase = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/tempDump/c598d460faca5f3a37f77c198d79fd7dd6c29d0aaf61d416ed5c57939ba23174/'
 
 # the LST acquisition time should determine which sharpened LST files are associatedto be processed (as they are associated with it)
 LST_acq_file = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/int_format/{year}/Daily_AcqTime_{comp}_{year}_{month}.tif' # epsg 4326
@@ -82,7 +82,8 @@ geopot_path = '/data/Aldhani/eoagritwin/et/Auxiliary/ERA5/tiff/low_res/geopotent
 LST_file = f'{sharp_pathbase}{comp}_{year}_{month}_{day:02d}_mvwin{mvwin}_cv{cv}_regrat{regrat}_{s2Mask}_{lstMask}.tif' # epsg:3035
 
 # for NDVI calculation (estimating LAI and others) and warping to S2 resolution, we use the S2 composite used for sharpening
-S2_file = [file for file in getFilelist(s2_pathbase, 'vrt', deep=True) if '_Cube.' in file][0]
+S2_file = [file for file in getFilelist(s2_pathbase, 'vrt', deep=False) if f'HIGHRES_{comp}_{year}_{month}_{day:02d}' in file][0]
+# [file for file in getFilelist(s2_pathbase, 'vrt', deep=True) if '_Cube.' in file][0]
 
 # find era5 file that matches the month of LST observation
 valid_variables = sorted(list(dict.fromkeys(file.split('/')[-2] for file in getFilelist(era5_path, '.grib', deep=True) \
@@ -94,7 +95,7 @@ era5_path_list = [path for path in era5_path_list if any(variable in path for va
 temp_pressure_checker(era5_path_list)
 
 
-# In[3]:
+# In[ ]:
 
 
 # warp datasets needed for calculations to the spatial extent of the sharpened LST
@@ -355,12 +356,13 @@ et_daily_p = TSEB.met.flux_2_evaporation(heat_latent_scaled, t_k=air_temp_20, ti
 # In[ ]:
 
 
+storPath = f'{tempOut}{comp}_{year}_{month}_{day}_mvwin{mvwin}_cv{cv}_regrat{regrat}_{lst_masked}_{s2_masked}_ET.tif'
 np.save(f'{tempOut}et.npy', et_daily_p)
-npTOdisk(et_daily_p, LST_file, f'{tempOut}et.tif')
+npTOdisk(et_daily_p, LST_file, storPath)
 
 
 # In[ ]:
 
 
-get_ipython().system('jupyter nbconvert --to script estimate_Evapotrans.ipynb --output /home/potzschf/repos/evapo_scripts/Guzinski/py/estimate_Evapotrans')
+get_ipython().system('jupyter nbconvert --to script estimate_Evapotrans.ipynb --output /home/potzschf/repos/evapo_scripts/Guzinski/py/estimate_Evapotrans_04_09')
 
