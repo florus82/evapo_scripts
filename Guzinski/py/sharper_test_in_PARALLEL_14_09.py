@@ -142,7 +142,7 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
         gdal.BuildVRT(thuenen_path, thuenen)
     else:
         print('Tile combination already processed before - slope and aspect vrt should already be present')
-        slope_path = f'{temp_dump_fold}SLOPE_vrt'
+        slope_path = f'{temp_dump_fold}SLOPE.vrt'
         aspect_path = f'{temp_dump_fold}ASPECT.vrt'
         thuenen_path = f'{temp_dump_fold}THUENEN.vrt'
 
@@ -194,7 +194,13 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
 
                 tilesS2 = [file for file in getFilelist(path_to_S2_tiles, '.tif', deep=True) if tiles_to_process[0] in file and f'{date}.tif' in file]
                 S2_path = f'{temp_dump_fold}S2_{date}.vrt'
-                gdal.BuildVRT(S2_path, tilesS2, separate=True)
+                vrt = gdal.BuildVRT(S2_path, tilesS2, separate=True)
+                vrt = None
+                vrt = gdal.Open(S2_path, gdal.GA_Update)  # VRT must be writable
+                for idz, bname in enumerate(colors): 
+                    band = vrt.GetRasterBand(1+idz)
+                    band.SetDescription(bname)
+                vrt = None
 
             else:
                 tilesS2 = [file for file in getFilelist(path_to_S2_tiles, '.tif', deep=True) if any(tile in file for tile in tiles_to_process) and f'{date}.tif' in file] 
@@ -284,19 +290,19 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
     # In[7]:
 
 
-    if __name__ == '__main__':
-        starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-        print("--------------------------------------------------------")
-        print("Starting process, time:" + starttime)
-        print("")
+    # if __name__ == '__main__':
+    #     starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    #     print("--------------------------------------------------------")
+    #     print("Starting process, time:" + starttime)
+    #     print("")
 
-        Parallel(n_jobs=20)(delayed(runSharpi)(job[0], job[1], job[2], job[3], job[4], job[5], job[6]) for job in joblist)
+    #     Parallel(n_jobs=20)(delayed(runSharpi)(job[0], job[1], job[2], job[3], job[4], job[5], job[6]) for job in joblist)
 
 
-        print("")
-        endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-        print("--------------------------------------------------------")
-        print("--------------------------------------------------------")
-        print("start : " + starttime)
-        print("end: " + endtime)
-        print("")
+    #     print("")
+    #     endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    #     print("--------------------------------------------------------")
+    #     print("--------------------------------------------------------")
+    #     print("start : " + starttime)
+    #     print("end: " + endtime)
+    #     print("")

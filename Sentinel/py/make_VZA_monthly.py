@@ -16,7 +16,7 @@ for year in [i for i in range(2017,2025,1)]:
     yearFiles = [file for file in files if int(file.split('/')[-1].split('_')[-1][0:4]) == year]
 
     for month in [f'{i:02d}' for i in range(1,13)]:
-        filename = f'VZA_MASK_{year}_{month}.tif'
+        filename = f'VZA_{year}_{month}.tif'
         if os.path.exists(f'{outPath}{filename}'):
             t = time.localtime()
             ti = time.strftime("%H:%M:%S", t)
@@ -24,7 +24,7 @@ for year in [i for i in range(2017,2025,1)]:
         else:
             print(f'working on month {month} in {year}')
             yfiles = [yF for yF in yearFiles if month == yF.split('-')[1]]
-   
+
             monthL = []
             bnames = []
             for file in yfiles:

@@ -364,5 +364,5 @@ npTOdisk(et_daily_p, LST_file, storPath)
 # In[ ]:
 
 
-get_ipython().system('jupyter nbconvert --to script estimate_Evapotrans.ipynb --output /home/potzschf/repos/evapo_scripts/Guzinski/py/estimate_Evapotrans_04_09')
+#get_ipython().system('jupyter nbconvert --to script estimate_Evapotrans.ipynb --output /home/potzschf/repos/evapo_scripts/Guzinski/py/estimate_Evapotrans_04_09')
 

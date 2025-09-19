@@ -124,7 +124,7 @@ if not os.path.exists(temp_dump_fold):
         thuenen_path = thuenen[0]
 
     else:
-        slope_path = f'{temp_dump_fold}SLOPE_vrt'
+        slope_path = f'{temp_dump_fold}SLOPE.vrt'
         gdal.BuildVRT(slope_path, slopes)
 
         aspect_path = f'{temp_dump_fold}ASPECT.vrt'
