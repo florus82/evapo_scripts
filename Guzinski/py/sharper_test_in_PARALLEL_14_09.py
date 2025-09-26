@@ -15,6 +15,7 @@ from joblib import Parallel, delayed
 
 os.environ["GDAL_MAX_DATASET_POOL_SIZE"] = "600"
 
+ncores = 40
 
 def runSharpi(highResFilename, lowResFilename, lowResMaskFilename, cv, movWin, regrat, outputFilename, useDecisionTree = True):
     commonOpts = {"highResFiles":               [highResFilename],
@@ -147,9 +148,6 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
         thuenen_path = f'{temp_dump_fold}THUENEN.vrt'
 
 
-    # In[5]:
-
-
     # year 
     year = 2019
 
@@ -174,11 +172,10 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
 
     #### S2 composites are time sensitive (need to be aligned with date of LST observation), so is incidence
     for date in date_list:
-
         # if not os.path.exists(f'{temp_dump_fold}INCIDENCE_{date}.vrt'):
-        if date != '20190705':
+        if date != '20190723': # '20190705':
             continue
-
+        
         # check if for that date vrts were already processed
         if os.path.exists(f'{temp_dump_fold}S2_{date}'):
             print('S2 data for this date already processed')
@@ -191,9 +188,9 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
         else:
             # get those tiles (and composite if more than one tile is provided)
             if len(tiles_to_process) == 1:
-
                 tilesS2 = [file for file in getFilelist(path_to_S2_tiles, '.tif', deep=True) if tiles_to_process[0] in file and f'{date}.tif' in file]
                 S2_path = f'{temp_dump_fold}S2_{date}.vrt'
+                print(S2_path)
                 vrt = gdal.BuildVRT(S2_path, tilesS2, separate=True)
                 vrt = None
                 vrt = gdal.Open(S2_path, gdal.GA_Update)  # VRT must be writable
@@ -219,7 +216,7 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
             # stat used for compositing
             for comp_stat in ['minVZA', 'maxLST']:
                 path_to_incident = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/{comp_stat}/{year}/'
-                path_to_LST = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/{comp_stat}/{year}/'
+                path_to_LST = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/LST_composites/{comp_stat}/{year}/'
 
                 # get all LST bands that can be sharped with the S2 composite at this date (and sun angle incidence files as well, as they are dependent on that date
                 LSTs = []
@@ -251,7 +248,7 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
                     # create highRes file through exapnding the vrt of S2
                     highRes_path = f'{temp_dump_fold}HIGHRES_{comp_stat}_{incid_date.split('.')[0]}.vrt'
                     gdal.BuildVRT(highRes_path, [S2_path, slope_path, aspect_path, incid_path], separate=True) # 
-                    maskVRT_water_and_drop_aux(highRes_path)
+                    maskVRT_water(highRes_path) # maskVRT_water_and_drop_aux(highRes_path)
                     highRes_files.append(f'{highRes_path.split('.')[0]}_watermask.tif')
                     highRes_names.append('S2notMasked')
                     maskVRT(f'{highRes_path.split('.')[0]}_watermask.tif', mask)
@@ -260,11 +257,9 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
                     highRes_names.append('S2Masked')
 
 
-    # In[6]:
-
 
     joblist = []
-    outFolder = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened/S2only/{rand_foldname}/'
+    outFolder = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened2/allpred/{rand_foldname}/'
     for idx, highResFilename in enumerate(highRes_files):
         lowResFilename = lowRes_files[idx]
         f1 = f'{outFolder}{'/'.join(highResFilename.split('.')[0].split('_')[2:6])}/'
@@ -287,22 +282,19 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
     print(f'\n{len(joblist)} times will be sharpened\n')
 
 
-    # In[7]:
+    if __name__ == '__main__':
+        starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+        print("--------------------------------------------------------")
+        print("Starting process, time:" + starttime)
+        print("")
+
+        Parallel(n_jobs=ncores)(delayed(runSharpi)(job[0], job[1], job[2], job[3], job[4], job[5], job[6]) for job in joblist)
 
 
-    # if __name__ == '__main__':
-    #     starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-    #     print("--------------------------------------------------------")
-    #     print("Starting process, time:" + starttime)
-    #     print("")
-
-    #     Parallel(n_jobs=20)(delayed(runSharpi)(job[0], job[1], job[2], job[3], job[4], job[5], job[6]) for job in joblist)
-
-
-    #     print("")
-    #     endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-    #     print("--------------------------------------------------------")
-    #     print("--------------------------------------------------------")
-    #     print("start : " + starttime)
-    #     print("end: " + endtime)
-    #     print("")
+    print("")
+    endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+    print("--------------------------------------------------------")
+    print("--------------------------------------------------------")
+    print("start : " + starttime)
+    print("end: " + endtime)
+    print("")

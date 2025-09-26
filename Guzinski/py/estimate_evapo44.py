@@ -40,7 +40,7 @@ def run_evapo(LST_file, day, year, comp, month, tempOut, cdx):
     # for NDVI calculation (estimating LAI and others) and warping to S2 resolution, we use the S2 composite used for sharpening
 
     # S2_file = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/tempDump/{LST_file.split(f'/{comp}')[0].split('/')[-1]}/HIGHRES_{comp}_{year}_{month}_{day:02d}_watermask.tif'
-    S2_file = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/tempDump/{LST_file.split(f'/{comp}')[0].split('/')[-1]}/S2_20190705.vrt'
+    S2_file = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/tempDump/{LST_file.split(f'/{comp}')[0].split('/')[-1]}/S2_20190512.vrt'
     # find era5 file that matches the month of LST observation
     valid_variables = sorted(list(dict.fromkeys(file.split('/')[-2] for file in getFilelist(era5_path, '.grib', deep=True) \
                                     if not any(var in file for var in ['geopotential', 'total_column_water_vapour']))))
@@ -231,17 +231,17 @@ def run_evapo(LST_file, day, year, comp, month, tempOut, cdx):
     heat_latent_scaled = ssrd_mean_20 * ld
     et_daily_p = TSEB.met.flux_2_evaporation(heat_latent_scaled, t_k=air_temp_20, time_domain=24)
 
-    storPath = f"{tempOut}{LST_file.split('/')[-1].split('.')[0]}_ET_{cdx}.tif"
+    storPath = f"{tempOut}{LST_file.split('/')[9]}_{LST_file.split('/')[-1].split('.')[0]}_ET_{cdx}.tif"
     npTOdisk(et_daily_p, LST_file, storPath)
 
 
-base_path = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened/'
+base_path = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened2/'
 
-folders = ['S2only', 'all_preds']
+folders = ['S2onlyshort', 'allpredshort']
 
 comps = ['maxLST', 'minVZA']
 
-days = [f'July_{i:02d}' for i in range(1,10,1)]
+days = [f'May_{i:02d}' for i in range(8,17,1)]
 
 masks = ['S2Masked_withLSTmask', 'S2Masked_withoutLSTmask', 'S2notMasked_withLSTmask', 'S2notMasked_withoutLSTmask']
 
@@ -259,14 +259,12 @@ for folder in folders:
                 file_dict[key] = file_list
 
 
-# set output path
-outDir = '/data/Aldhani/eoagritwin/et/Auxiliary/trash/44/'
-
 # set the year, month and day to estimate evapotranspiration for
 year = 2019
-month = 'July'
-day = 9
+month = 'May'
+day = 14
 comp = 'minVZA'
+folder = folders[0]
 
 # set the parameters from sharpener
 mvwin = 0
@@ -287,7 +285,11 @@ else:
     lstMask = 'withoutLSTmask'
 
 
-LST_files = file_dict[('all_preds', comp, f'{month}_{day:02d}', f'{s2Mask}_{lstMask}')]
+LST_files = file_dict[(folder, comp, f'{month}_{day:02d}', f'{s2Mask}_{lstMask}')]
+
+# set output path
+outDir = f'/data/Aldhani/eoagritwin/et/Auxiliary/S2_ETa/44/single_tiles/{folder}_{comp}_{month}_{day:02d}_{s2Mask}_{lstMask}/'
+os.makedirs(outDir, exist_ok=True)
 
 joblist = []
 

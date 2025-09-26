@@ -8,14 +8,15 @@ client = cdsapi.Client()
 dataset = "cams-global-reanalysis-eac4"
 # Define the dataset and request parameters
 
-years = [str(y) for y in range(2017,2025,1)]
-months = [m for m in range(1,13,1)]
+years = [str(y) for y in range(2019,2025,1)]
+
+months = [m for m in [4,6,9,11]]
 for year in years:
     for month in months:
         try:
             request = {
                 "variable": ["total_aerosol_optical_depth_550nm"],
-                "date": [f'{year}-{month:02d}-01/{year}-{month:02d}-29'],
+                "date": [f'{year}-{month:02d}-01/{year}-{month:02d}-30'],
 
                 "time": [
                     "00:00", "03:00", "06:00", "09:00",
