@@ -15,7 +15,7 @@ from joblib import Parallel, delayed
 
 os.environ["GDAL_MAX_DATASET_POOL_SIZE"] = "600"
 
-ncores = 40
+ncores = 10
 
 def runSharpi(highResFilename, lowResFilename, lowResMaskFilename, cv, movWin, regrat, outputFilename, useDecisionTree = True):
     commonOpts = {"highResFiles":               [highResFilename],
@@ -71,14 +71,13 @@ def runSharpi(highResFilename, lowResFilename, lowResMaskFilename, cv, movWin, r
 
     print(time.time() - start_time, "seconds")
 
-
 # In[3]:
 
 
 # paths
 lowmask_path = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/reprojected/THUENEN_GER_LST_WARP.tif'
 lowmask_bin_path = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/reprojected/THUENEN_GER_LST_WARP_BINARY.tif'
-temp_dump = '/data/Aldhani/eoagritwin/et/Sentinel3//LST/LST_values/tempDump/'
+temp_dump = '/data/Aldhani/eoagritwin/et/Sentinel3//LST/LST_values/tempDump3X3/'
 
 # create vrts of slope, aspect and landcover (for masking)
 path_to_slope = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/SLOPE/'
@@ -90,180 +89,195 @@ path_to_agro = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/THUENEN_20
 # tiles_to_process = createFORCEtileLIST(list(bran['Tile_X']),
 #                                         list(bran['Tile_Y']))
 
-Tiles_X = [[i] for i in range(60,71,1)] * 4
-Tiles_Y = [[i] for i in range(40,44,1) for _ in range(int(len(Tiles_X)/4))]
-
-for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
-    print(Tile_X)
-    print(Tile_Y)
-
-    tiles_to_process = createFORCEtileLIST(Tile_X, Tile_Y)
+# Tiles_X = [[i] for i in range(60,71,1)] * 4
+# Tiles_Y = [[i] for i in range(40,44,1) for _ in range(int(len(Tiles_X)/4))]
 
 
-    # In[4]:
+# Tiles_X = [[67]] 
+# Tiles_Y = [[42]]
+
+tiles_to_process = createFORCEtileLIST([63,64,65,63,64,65,63,64,65],
+                                        [41,41,41,42,42,42,43,43,43])
 
 
-    # make a specific folder for this run and store the info together
-    csv_path = f'{temp_dump}folders.csv'
-    rand_foldname = getUniqueIDfromTILESXY(Tile_X, Tile_Y)
-    temp_dump_fold = f'{temp_dump}{rand_foldname}/'
+# for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
+#     print(Tile_X)
+#     print(Tile_Y)
 
-    if not os.path.exists(temp_dump_fold):
-        os.makedirs(temp_dump_fold,exist_ok=False)
-
-        df = pd.DataFrame({
-                'Folder': temp_dump_fold,
-                'Tile_X': Tile_X,
-                'Tile_Y': Tile_Y   
-            })
-
-        if not os.path.exists(csv_path):
-            df.to_csv(csv_path, index=False)
-        else:
-            df_exist = pd.read_csv(csv_path)
-            df_new = pd.concat([df_exist, df], ignore_index=True)
-            df_new.to_csv(csv_path, index=False)
-            # add the lines
-
-        # slope-tiles
-        slopes = [file for file in getFilelist(path_to_slope, '.tif') if any(tile in file for tile in tiles_to_process)] # if any tile name is in file
-        # aspect-tiles
-        aspects = [file for file in getFilelist(path_to_aspect, '.tif') if any(tile in file for tile in tiles_to_process)] # if any tile name is in file
-        # thuenen-tiles
-        thuenen = [file for file in getFilelist(path_to_agro, '.tif') if any(tile in file for tile in tiles_to_process)] # if any tile name is in file
-
-        # get those tiles (and composite if more than one tile is provided)
-        slope_path = f'{temp_dump_fold}SLOPE_vrt'
-        gdal.BuildVRT(slope_path, slopes)
-
-        aspect_path = f'{temp_dump_fold}ASPECT.vrt'
-        gdal.BuildVRT(aspect_path, aspects)
-
-        thuenen_path = f'{temp_dump_fold}THUENEN.vrt'
-        gdal.BuildVRT(thuenen_path, thuenen)
-    else:
-        print('Tile combination already processed before - slope and aspect vrt should already be present')
-        slope_path = f'{temp_dump_fold}SLOPE.vrt'
-        aspect_path = f'{temp_dump_fold}ASPECT.vrt'
-        thuenen_path = f'{temp_dump_fold}THUENEN.vrt'
+# tiles_to_process = createFORCEtileLIST(Tile_X, Tile_Y)
 
 
-    # year 
-    year = 2019
+# make a specific folder for this run and store the info together
+csv_path = f'{temp_dump}folders.csv'
+rand_foldname = 'TEST3X3NEW' #getUniqueIDfromTILESXY(Tile_X, Tile_Y)
+temp_dump_fold = f'{temp_dump}{rand_foldname}/'
 
-    # paths
-    path_to_S2_tiles = f'/data/Aldhani/eoagritwin/force/output/Guzinski/{year}/'
+if not os.path.exists(temp_dump_fold):
+    os.makedirs(temp_dump_fold,exist_ok=False)
 
-    ##### which tiles should be processed
-    # get a list with all available tiles
-    files = getFilelist(f'{path_to_S2_tiles}/tiles', '.tif', deep=True) 
-    files = [file for file in files if any(tile in file for tile in tiles_to_process)]
-    date_list = check_forceTSI_compositionDates(files)
+    # df = pd.DataFrame({
+    #         'Folder': temp_dump_fold,
+    #         'Tile_X': Tile_X,
+    #         'Tile_Y': Tile_Y   
+    #     })
 
-    th_ds = gdal.Open(thuenen_path)
-    th_arr = th_ds.GetRasterBand(1).ReadAsArray()
-    mask = np.where(th_arr == -9999, 0, 1)
+    # if not os.path.exists(csv_path):
+    #     df.to_csv(csv_path, index=False)
+    # else:
+    #     df_exist = pd.read_csv(csv_path)
+    #     df_new = pd.concat([df_exist, df], ignore_index=True)
+    #     df_new.to_csv(csv_path, index=False)
+    #     # add the lines
 
-    lowRes_files = []
-    highRes_files = []
-    highRes_names = []
+# slope-tiles
+slopes = [file for file in getFilelist(path_to_slope, '.tif') if any(tile in file for tile in tiles_to_process)] # if any tile name is in file
+# aspect-tiles
+aspects = [file for file in getFilelist(path_to_aspect, '.tif') if any(tile in file for tile in tiles_to_process)] # if any tile name is in file
+# thuenen-tiles
+thuenen = [file for file in getFilelist(path_to_agro, '.tif') if any(tile in file for tile in tiles_to_process)] # if any tile name is in file
 
-    colors = ['BLU', 'GRN', 'RED', 'NIR', 'RE1', 'RE2', 'RE3',  'SW1', 'SW2']
+# get those tiles (and composite if more than one tile is provided)
+slope_path = f'{temp_dump_fold}SLOPE_vrt'
+gdal.BuildVRT(slope_path, slopes)
 
-    #### S2 composites are time sensitive (need to be aligned with date of LST observation), so is incidence
-    for date in date_list:
-        # if not os.path.exists(f'{temp_dump_fold}INCIDENCE_{date}.vrt'):
-        if date != '20190723': # '20190705':
-            continue
-        
-        # check if for that date vrts were already processed
-        if os.path.exists(f'{temp_dump_fold}S2_{date}'):
-            print('S2 data for this date already processed')
-            not_masked = [file for file in getFilelist(temp_dump_fold, '.vrt') if 'HIGHRES' in file]
-            masked = [file for file in getFilelist(temp_dump_fold, '.tif') if 'HIGHRES' in file]
-            highRes_files = [item for pair in zip(not_masked, masked) for item in pair]
-            highRes_names = ["S2notMasked" if ".vrt" in file else "S2Masked" for file in highRes_files]
-            lowRes_files = [f for f in [file for file in getFilelist(temp_dump_fold, '.tif') if 'Daily_LST' in file] for _ in range(2)]
-            continue
-        else:
-            # get those tiles (and composite if more than one tile is provided)
-            if len(tiles_to_process) == 1:
-                tilesS2 = [file for file in getFilelist(path_to_S2_tiles, '.tif', deep=True) if tiles_to_process[0] in file and f'{date}.tif' in file]
-                S2_path = f'{temp_dump_fold}S2_{date}.vrt'
-                print(S2_path)
-                vrt = gdal.BuildVRT(S2_path, tilesS2, separate=True)
-                vrt = None
-                vrt = gdal.Open(S2_path, gdal.GA_Update)  # VRT must be writable
-                for idz, bname in enumerate(colors): 
-                    band = vrt.GetRasterBand(1+idz)
-                    band.SetDescription(bname)
-                vrt = None
+aspect_path = f'{temp_dump_fold}ASPECT.vrt'
+gdal.BuildVRT(aspect_path, aspects)
 
-            else:
-                tilesS2 = [file for file in getFilelist(path_to_S2_tiles, '.tif', deep=True) if any(tile in file for tile in tiles_to_process) and f'{date}.tif' in file] 
-                force_to_vrt(tilesS2,
-                        getCOLORSinOrderFORCELIST(tilesS2, colors, single=False),
-                        f'{temp_dump_fold}S2_{date}',
-                        False,
-                        bandnames= colors)
+thuenen_path = f'{temp_dump_fold}THUENEN.vrt'
+gdal.BuildVRT(thuenen_path, thuenen)
+
+# else:
+#     print('Tile combination already processed before - slope and aspect vrt should already be present')
+#     slope_path = f'{temp_dump_fold}SLOPE.vrt'
+#     aspect_path = f'{temp_dump_fold}ASPECT.vrt'
+#     thuenen_path = f'{temp_dump_fold}THUENEN.vrt'
+
+
+# year 
+year = 2019
+
+# paths
+path_to_S2_tiles = f'/data/Aldhani/eoagritwin/force/output/Guzinski/{year}/'
+
+##### which tiles should be processed
+# get a list with all available tiles
+files = getFilelist(f'{path_to_S2_tiles}/tiles', '.tif', deep=True) 
+files = [file for file in files if any(tile in file for tile in tiles_to_process)]
+date_list = check_forceTSI_compositionDates(files)
+
+th_ds = gdal.Open(thuenen_path)
+th_arr = th_ds.GetRasterBand(1).ReadAsArray()
+mask = np.where(th_arr == -9999, 0, 1)
+
+lowRes_files = []
+highRes_files = []
+highRes_names = []
+
+colors = ['BLU', 'GRN', 'RED', 'NIR', 'RE1', 'RE2', 'RE3',  'SW1', 'SW2']
+
+#### S2 composites are time sensitive (need to be aligned with date of LST observation), so is incidence
+for date in date_list:
+    # if not os.path.exists(f'{temp_dump_fold}INCIDENCE_{date}.vrt'):
+    if date != '20190723': # '20190705':
+        continue
     
-                S2_path = [file for file in getFilelist(f'{temp_dump_fold}S2_{date}', '.vrt', deep=True) if '_Cube' in file][0]
+    # check if for that date vrts were already processed
+    if os.path.exists(f'{temp_dump_fold}S2_{date}'):
+        print('S2 data for this date already processed')
+        not_masked = [file for file in getFilelist(temp_dump_fold, '.vrt') if 'HIGHRES' in file]
+        masked = [file for file in getFilelist(temp_dump_fold, '.tif') if 'HIGHRES' in file]
+        highRes_files = [item for pair in zip(not_masked, masked) for item in pair]
+        highRes_names = ["S2notMasked" if ".vrt" in file else "S2Masked" for file in highRes_files]
+        lowRes_files = [f for f in [file for file in getFilelist(temp_dump_fold, '.tif') if 'Daily_LST' in file] for _ in range(2)]
+        continue
 
-                # determine LST and incidence files associated with respective S2 composite
-            band_dict = transform_compositeDate_into_LSTbands(date, 4)
+    else:
+        # get those tiles (and composite if more than one tile is provided)
+        if len(tiles_to_process) == 1:
+            tilesS2 = [file for file in getFilelist(path_to_S2_tiles, '.tif', deep=True) if tiles_to_process[0] in file and f'{date}.tif' in file]
+            tilesS2 = [t2 for col in colors for t2 in tilesS2 if col in t2]
+            S2_path = f'{temp_dump_fold}S2_{date}.vrt'
+            print(S2_path)
+            vrt = gdal.BuildVRT(S2_path, tilesS2, separate=True)
+            vrt = None
+            vrt = gdal.Open(S2_path, gdal.GA_Update)  # VRT must be writable
+            for idz, bname in enumerate(colors): 
+                band = vrt.GetRasterBand(1+idz)
+                band.SetDescription(bname)
+            vrt = None
+
+        else:
+            tilesS2 = [file for file in getFilelist(path_to_S2_tiles, '.tif', deep=True) if any(tile in file for tile in tiles_to_process) and f'{date}.tif' in file] 
+            force_to_vrt(tilesS2,
+                    getCOLORSinOrderFORCELIST(tilesS2, colors, single=False),
+                    f'{temp_dump_fold}S2_{date}',
+                    False,
+                    bandnames= colors)
+
+            S2_path = [file for file in getFilelist(f'{temp_dump_fold}S2_{date}', '.vrt', deep=True) if '_Cube' in file][0]
+
+            # determine LST and incidence files associated with respective S2 composite
+        band_dict = transform_compositeDate_into_LSTbands(date, 4)
 
 
-            # stat used for compositing
-            for comp_stat in ['minVZA', 'maxLST']:
-                path_to_incident = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE/{comp_stat}/{year}/'
-                path_to_LST = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/LST_composites/{comp_stat}/{year}/'
+        # stat used for compositing
+        for comp_stat in ['minVZA', 'maxLST']: #  
+            path_to_incident = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE2/{comp_stat}/{year}/'
+            path_to_LST = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/LST_composites/{comp_stat}/{year}/'
 
-                # get all LST bands that can be sharped with the S2 composite at this date (and sun angle incidence files as well, as they are dependent on that date
-                LSTs = []
+            # get all LST bands that can be sharped with the S2 composite at this date (and sun angle incidence files as well, as they are dependent on that date
+            LSTs = []
 
-                for k, v in band_dict.items():
-                    month = v['month']
-                    band = int(v['band'])
-                    v_path = f'{path_to_LST}Daily_LST_{comp_stat}_{year}_{month}.tif'
-                    ds = gdal.Open(v_path, 0)
+            for k, v in band_dict.items():
+                month = v['month']
+                band = int(v['band'])
+                v_path = f'{path_to_LST}Daily_LST_{comp_stat}_{year}_{month}.tif'
+                ds = gdal.Open(v_path, 0)
 
-                    # export the LST for that day
-                    LST_arr = ds.GetRasterBand(band).ReadAsArray() # store as single Tiff in temp
-                    makeTif_np_to_matching_tif(LST_arr, v_path, f'{temp_dump_fold}Daily_LST_{comp_stat}_{year}_{month}_{band:02d}.tif')
+                # export the LST for that day
+                LST_arr = ds.GetRasterBand(band).ReadAsArray() # store as single Tiff in temp
+                daily_lst_path = f'{temp_dump_fold}Daily_LST_{comp_stat}_{year}_{month}_{band:02d}.tif'
+                makeTif_np_to_matching_tif(LST_arr, v_path, daily_lst_path)
+                # warp_np_to_reference(arr=LST_arr, arr_tif_path=v_path, target_tif_path=slope_path, noData=0, output_path=daily_lst_path)
+            
+                # store the paths for selecting incidence for corresponding LST
+                incid_date = f'{year}_{month}_{band:02d}.tif'
 
-                    # store the paths for selecting incidence for corresponding LST
-                    incid_date = f'{year}_{month}_{band:02d}.tif'
-                    lowRes_files.append(f'{temp_dump_fold}Daily_LST_{comp_stat}_{year}_{month}_{band:02d}.tif')
+                # incidence-tiles
+                incids = [file for file in getFilelist(path_to_incident, '.tif', deep=True) if any(tile in file for tile in tiles_to_process) and incid_date in file] 
+                # get those tiles (and composite if more than one tile is provided)
+                if len(tiles_to_process) == 1:
+                    incid_path = incids[0]
 
-                    # incidence-tiles
-                    incids = [file for file in getFilelist(path_to_incident, '.tif', deep=True) if any(tile in file for tile in tiles_to_process) and incid_date in file] 
-                    # get those tiles (and composite if more than one tile is provided)
-                    if len(tiles_to_process) == 1:
-                        incid_path = incids[0]
+                else:
+                    incid_path = f'{temp_dump_fold}INCIDENCE_{comp_stat}_{incid_date.split('.')[0]}.vrt'
+                    gdal.BuildVRT(incid_path, incids)
 
+                # create highRes file through exapnding the vrt of S2
+                highRes_path = f'{temp_dump_fold}HIGHRES_{comp_stat}_{incid_date.split('.')[0]}.vrt'
+                gdal.BuildVRT(highRes_path, [S2_path, slope_path, aspect_path, incid_path], separate=True) # 
+                
+                for predi in ['allpred', 'S2only']:
+                    if predi == 'allpred':
+                        maskVRT_water(highRes_path)
                     else:
-                        incid_path = f'{temp_dump_fold}INCIDENCE_{comp_stat}_{incid_date.split('.')[0]}.vrt'
-                        gdal.BuildVRT(incid_path, incids)
-
-                    # create highRes file through exapnding the vrt of S2
-                    highRes_path = f'{temp_dump_fold}HIGHRES_{comp_stat}_{incid_date.split('.')[0]}.vrt'
-                    gdal.BuildVRT(highRes_path, [S2_path, slope_path, aspect_path, incid_path], separate=True) # 
-                    maskVRT_water(highRes_path) # maskVRT_water_and_drop_aux(highRes_path)
+                        maskVRT_water_and_drop_aux(highRes_path) # 
                     highRes_files.append(f'{highRes_path.split('.')[0]}_watermask.tif')
-                    highRes_names.append('S2notMasked')
-                    maskVRT(f'{highRes_path.split('.')[0]}_watermask.tif', mask)
-                    highRes_files.append(f'{highRes_path.split('.')[0]}_watermask_S2_agromask.tif')
-                    lowRes_files.append(f'{temp_dump_fold}Daily_LST_{comp_stat}_{year}_{month}_{band:02d}.tif')
-                    highRes_names.append('S2Masked')
-
-
+                    highRes_names.append(f'S2notMasked_{predi}')
+                    lowRes_files.append(daily_lst_path)
+                    maskVRT(f'{highRes_path.split('.')[0]}_watermask.tif', mask, suffix=f'_S2_agromask_{predi}')
+                    # os.remove(f'{highRes_path.split('.')[0]}_watermask.tif')
+                    highRes_files.append(f'{highRes_path.split('.')[0]}_watermask_S2_agromask_{predi}.tif')
+                    lowRes_files.append(daily_lst_path)
+                    highRes_names.append(f'S2Masked_{predi}')
 
     joblist = []
-    outFolder = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened2/allpred/{rand_foldname}/'
+    outFolder = f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/sharpened_3X3/{rand_foldname}/'
     for idx, highResFilename in enumerate(highRes_files):
         lowResFilename = lowRes_files[idx]
         f1 = f'{outFolder}{'/'.join(highResFilename.split('.')[0].split('_')[2:6])}/'
-        for maskname, mask_lowRes in zip(['withoutLSTmask', 'withLSTmask'], ['', lowmask_bin_path]):
+        for maskname, mask_lowRes in zip(['withoutLSTmask'], ['']): # 'withLSTmask'  lowmask_bin_path
+        # for maskname, mask_lowRes in zip(['withoutLSTmask', 'withLSTmask'], ['', lowmask_bin_path]):
             lowResMaskFilename = mask_lowRes
             f2 = f'{f1}{maskname}/'
             for movWin in [15]:
@@ -280,6 +294,15 @@ for Tile_X, Tile_Y in zip(Tiles_X, Tiles_Y):
                                     f'{f3}{'_'.join(highResFilename.split('.')[0].split('_')[2:6])}_{kombi}.tif'])
 
     print(f'\n{len(joblist)} times will be sharpened\n')
+
+    print(f'{len(highRes_files)} files in highRes_files')
+    print(f'{len(highRes_names)} files in highRes_names')
+    print(f'{len(lowRes_files)} files in lowRes_files')
+
+
+    print("Script is paused until you press Enter...")
+    input("Press Enter to continue: ")
+    print("Now the script continues!")
 
 
     if __name__ == '__main__':

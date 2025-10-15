@@ -19,7 +19,7 @@ VZA_stor_Path_top3 = '/data/Aldhani/eoagritwin/et/Sentinel3/VZA/comp/top3/'
 AcqTime_stor_path = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/int_format/'
 AirTemp_path = '/data/Aldhani/eoagritwin/et/Auxiliary/ERA5/tiff/low_res/2m_temperature/'
 
-for year in [2019]:
+for year in [2020]:
 
     # set storage paths to the current year
     LST_stor_Path_minVZA_year = f'{LST_stor_Path_minVZA}{year}/'
