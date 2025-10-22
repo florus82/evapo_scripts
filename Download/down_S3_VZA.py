@@ -31,9 +31,9 @@ germany = {"west": 5.592041, "south": 47.129951, "east": 15.26001, "north": 55.0
 
 while dates:
 
-    for date in dates:  # Iterates over a copy of the list to allow removal at the end without messing up the order
+    for date in dates[:]:  # Iterates over a copy of the list to allow removal at the end without messing up the order
 
-            storPath = f"/data/Aldhani/eoagritwin/et/Auxiliary/VZA/raw/Germany_{date[0]}.nc"
+            storPath = f"/data/Aldhani/eoagritwin/et/Sentinel3/raw_VAA_masked/Germany_{date[0]}.nc"
             print(storPath)
             
             if os.path.exists(storPath):
@@ -47,7 +47,7 @@ while dates:
                     "SENTINEL3_SLSTR_L2_LST",
                     spatial_extent = germany,
                     temporal_extent = date,
-                    bands=["viewZenithAngles"]#, "exception", "confidence_in"]
+                    bands=["viewAzimuthAngles"]#, "exception", "confidence_in"]
                     )
                     
                     # band1 = sentinel3_cube.band('confidence_in')

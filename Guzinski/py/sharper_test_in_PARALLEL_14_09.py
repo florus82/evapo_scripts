@@ -173,7 +173,7 @@ lowRes_files = []
 highRes_files = []
 highRes_names = []
 
-colors = ['BLU', 'GRN', 'RED', 'NIR', 'RE1', 'RE2', 'RE3',  'SW1', 'SW2']
+colors = ['BLU', 'GRN', 'RED', 'BRN', 'NIR', 'RE1', 'RE2', 'RE3',  'SW1', 'SW2']
 
 #### S2 composites are time sensitive (need to be aligned with date of LST observation), so is incidence
 for date in date_list:

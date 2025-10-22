@@ -63,7 +63,7 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
     lookUp = LandsatETFileManager(landsat_files)
 
     #### do the compositing monthly
-    for year in range(2019,2020):#(2024, 2017, -1):
+    for year in [2019]:#(2024, 2017, -1):
         print(year)
         # outdir = f'/data/{origin}et/Landsat/composites/max/{state}/{year}'
         # if os.path.exists(outdir):
@@ -157,7 +157,7 @@ for i in [3,0,1,6,7,8,9,10,11,12,13,14,15,2,4,5]: # determine order in which sta
                 for day in range(warped_masked.shape[2]):
                     makeTif_np_to_matching_tif(warped_masked[:, :, day], 
                                                 f'/data/{origin}et/Auxiliary/Landsat_GER_mask/states/{state}.tif',
-                                                f'{outdir}/Landsat_ETA_{state}_{year}_{month:02d}_{day+1}.tif',
+                                                f'{outdir}/Landsat_ETA_{state}_{year}_{month:02d}_{(day+1):02d}.tif',
                                                 0,
                                                 gdalType=gdal.GDT_Float32)
 

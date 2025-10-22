@@ -51,7 +51,7 @@ while dates:
 
     for date in dates[:]:  # Iterates over a copy of the list to allow removal at the end without messing up the order
 
-            storPath = f"/data/Aldhani/eoagritwin/et/Sentinel3/raw_VZA_masked/Germany_{('-').join(date[0].split('-')[:2])}.nc"
+            storPath = f"/data/Aldhani/eoagritwin/et/Sentinel3/raw_VAA_masked/Germany_{('-').join(date[0].split('-')[:2])}.nc"
             print(storPath)
             
             if os.path.exists(storPath):
@@ -65,15 +65,15 @@ while dates:
                     "SENTINEL3_SLSTR_L2_LST",
                     spatial_extent = germany,
                     temporal_extent = date,
-                    bands=["LST", "exception", "confidence_in", "viewZenithAngles"]
+                    bands=["LST", "exception", "confidence_in", "viewAzimuthAngles"]
                     )
                     
                     band1 = sentinel3_cube.band('confidence_in')
                     band2 = sentinel3_cube.band('LST')
                     band3 = sentinel3_cube.band('exception')
-                    band4 = sentinel3_cube.band('viewZenithAngles')
+                    band4 = sentinel3_cube.band('viewAzimuthAngles')
 
-                    cloud_mask = (band1 >= 16384) | (band2 <= -32768) | (band3 != 0) | (band4>45)
+                    cloud_mask = (band1 >= 16384) | (band2 <= -32768) | (band3 != 0) 
                     sentinel3_cube_masked = sentinel3_cube.mask(cloud_mask)
                     sentinel3_cube_masked = sentinel3_cube_masked.filter_bands(['LST'])
                     sentinel3_cube_masked.download(storPath)

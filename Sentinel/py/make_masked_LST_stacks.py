@@ -11,15 +11,20 @@ LST_stor_Path_top3 = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/LST_c
 
 LST_path = '/data/Aldhani/eoagritwin/et/Sentinel3/raw_LST/'
 VZA_path = '/data/Aldhani/eoagritwin/et/Sentinel3/VZA/monthly_tiff_values/'
+VAA_path = '/data/Aldhani/eoagritwin/et/Sentinel3/VAA/monthly_tiff_values/'
 
 VZA_stor_Path_minVZA = '/data/Aldhani/eoagritwin/et/Sentinel3/VZA/comp/minVZA/'
 VZA_stor_Path_maxLST = '/data/Aldhani/eoagritwin/et/Sentinel3/VZA/comp/maxLST/'
 VZA_stor_Path_top3 = '/data/Aldhani/eoagritwin/et/Sentinel3/VZA/comp/top3/'
 
-AcqTime_stor_path = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/int_format/'
+VAA_stor_Path_minVZA = '/data/Aldhani/eoagritwin/et/Sentinel3/VAA/comp/minVZA/'
+VAA_stor_Path_maxLST = '/data/Aldhani/eoagritwin/et/Sentinel3/VAA/comp/maxLST/'
+VAA_stor_Path_top3 = '/data/Aldhani/eoagritwin/et/Sentinel3/VAA/comp/top3/'
+
+AcqTime_stor_path = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/'
 AirTemp_path = '/data/Aldhani/eoagritwin/et/Auxiliary/ERA5/tiff/low_res/2m_temperature/'
 
-for year in [2020]:
+for year in [2019]:
 
     # set storage paths to the current year
     LST_stor_Path_minVZA_year = f'{LST_stor_Path_minVZA}{year}/'
@@ -30,18 +35,25 @@ for year in [2020]:
     VZA_stor_Path_maxLST_year = f'{VZA_stor_Path_maxLST}{year}/'
     VZA_stor_Path_top3_year = f'{VZA_stor_Path_top3}{year}/' 
 
+    VAA_stor_Path_minVZA_year = f'{VAA_stor_Path_minVZA}{year}/'
+    VAA_stor_Path_maxLST_year = f'{VAA_stor_Path_maxLST}{year}/'
+    VAA_stor_Path_top3_year = f'{VAA_stor_Path_top3}{year}/' 
+
     AcqTime_stor_path_year = f'{AcqTime_stor_path}{year}/'
 
     # make paths if they don't exist
-    [os.makedirs(path, exist_ok=True) for path in [LST_stor_Path_minVZA_year, LST_stor_Path_maxLST_year, LST_stor_Path_top3_year,
-                                                    AcqTime_stor_path_year, VZA_stor_Path_maxLST_year, VZA_stor_Path_minVZA_year, VZA_stor_Path_top3_year]]
+    [os.makedirs(path, exist_ok=True) for path in [LST_stor_Path_minVZA_year, LST_stor_Path_maxLST_year, LST_stor_Path_top3_year, 
+                                                   AcqTime_stor_path_year, VZA_stor_Path_maxLST_year, VZA_stor_Path_minVZA_year,
+                                                   VZA_stor_Path_top3_year, VAA_stor_Path_maxLST_year, VAA_stor_Path_minVZA_year,
+                                                   VAA_stor_Path_top3_year]]
 
     # get a temporal subset of LST, VZA and air temp files for that year
     files = sorted(getFilelist(LST_path, '.nc'))
     yearFiles_LST = [file for file in sorted(getFilelist(LST_path, '.nc')) if int(file.split('/')[-1].split('_')[-1][0:4]) == year]
     yearFiles_VZA = getFilelist(f'{VZA_path}{year}/', 'tif')
+    yearFiles_VAA = getFilelist(f'{VAA_path}{year}/', 'tif')
     yearFiles_2mT = getFilelist(f'{AirTemp_path}{year}', '.tif')
-    mask = makeGermanyMaskforNC('/data/Aldhani/eoagritwin/misc/gadm41_DEU_shp/gadm41_DEU_0.shp', yearFiles_LST[0])
+    # mask = makeGermanyMaskforNC('/data/Aldhani/eoagritwin/misc/gadm41_DEU_shp/gadm41_DEU_0.shp', yearFiles_LST[0])
 
     # loop over files and export to .tif at Path locations
     for month in [f'{i:02d}' for i in range(1,13)]:
@@ -65,7 +77,9 @@ for year in [2020]:
 
             # get VZA stack and 2m airtemperature mask
             file_VZA = [yearfile_VZA for yearfile_VZA in yearFiles_VZA if f'{month}.tif' == yearfile_VZA.split('_')[-1]][0]
+            file_VAA = [yearfile_VAA for yearfile_VAA in yearFiles_VAA if f'{month}.tif' == yearfile_VAA.split('_')[-1]][0]
             dat_VZA = stackReader(file_VZA)
+            dat_VAA = stackReader(file_VAA)
 
             # sanity check
             if (dat_LST.shape == dat_VZA.shape):
@@ -95,6 +109,8 @@ for year in [2020]:
                 maxLST_LST = [] # collects 2D numpy arrays with masked LST values from maxLST compositiing
                 minVZA_VZA = [] # collects 2D numpy arrays with masked VZA values from minVZA compositiing
                 maxLST_VZA = [] # collects 2D numpy arrays with masked VZA values from maxLST compositiing
+                minVZA_VAA = [] # collects 2D numpy arrays with masked VAA values from minVZA compositiing
+                maxLST_VAA = [] # collects 2D numpy arrays with masked VAA values from maxLST compositiing
                 
                 minACQL = [] # collect acquisition times of minVZA pixel
                 minACQL_read = [] # collect readable acquisition times of minVZA pixel
@@ -103,6 +119,7 @@ for year in [2020]:
 
                 lst_order1, lst_order2, lst_order3 = [], [], [] # order1 holds most pixel within scene
                 vza_order1, vza_order2, vza_order3 = [], [], []
+                vaa_order1, vaa_order2, vaa_order3 = [], [], []
                 order1_time_int, order2_time_int, order3_time_int = [], [], []  
                 order1_time_read, order2_time_read, order3_time_read = [], [], []
                 doyL = [] # for band names when exporting
@@ -113,6 +130,7 @@ for year in [2020]:
                     # Select the slices for the day:
                     LST_slice = dat_LST[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]]  # shape (X,Y,Z)
                     VZA_slice = dat_VZA[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]]  # shape (X,Y,Z)
+                    VAA_slice = dat_VAA[:, :, cumulative_day_counts_start[l]:cumulative_day_counts_end[l]]  # shape (X,Y,Z)
 
                     # Create mask where LST is valid and VZA < 45
                     valid_mask = (~np.isnan(LST_slice)) & (VZA_slice < 45)
@@ -134,6 +152,8 @@ for year in [2020]:
                     best_LST_maxLST = LST_slice[x_indices, y_indices, maxLST_idx]  # shape (X,Y)
                     best_VZA_minVZA = VZA_slice[x_indices, y_indices, minVZA_idx]  # shape (X,Y)
                     best_VZA_maxLST = VZA_slice[x_indices, y_indices, maxLST_idx]  # shape (X,Y)
+                    best_VAA_minVZA = VAA_slice[x_indices, y_indices, minVZA_idx]  # shape (X,Y)
+                    best_VAA_maxLST = VAA_slice[x_indices, y_indices, maxLST_idx]  # shape (X,Y)
 
                     # Take care of all invalid pixel that might have sneaked in through np.argmin
                     no_valid_points_minVZA = ~np.any(valid_mask, axis=2)  # shape (X,Y)
@@ -145,11 +165,17 @@ for year in [2020]:
                     best_VZA_minVZA[no_valid_points_minVZA] = np.nan
                     best_VZA_maxLST[no_valid_points_maxLST] = np.nan
 
-                    minVZA_LST.append(best_LST_minVZA * mask)
-                    maxLST_LST.append(best_LST_maxLST * mask)
+                    best_VAA_minVZA[no_valid_points_minVZA] = np.nan
+                    best_VAA_maxLST[no_valid_points_maxLST] = np.nan
+
+                    minVZA_LST.append(best_LST_minVZA) # * mask)
+                    maxLST_LST.append(best_LST_maxLST) # * mask)
                     
-                    minVZA_VZA.append(best_VZA_minVZA * mask)
-                    maxLST_VZA.append(best_VZA_maxLST * mask)
+                    minVZA_VZA.append(best_VZA_minVZA) # * mask)
+                    maxLST_VZA.append(best_VZA_maxLST) # * mask)
+
+                    minVZA_VAA.append(best_VAA_minVZA) # * mask)
+                    maxLST_VAA.append(best_VAA_maxLST) # * mask)
 
                     doyL.append(f'DOY_{l+1}')
 
@@ -162,12 +188,12 @@ for year in [2020]:
                     acq_time = timestamp_array[x_indices, y_indices, minVZA_idx]  
                     acq_time_unix = acq_time.astype('datetime64[s]').astype(int) # convert back with pd.to_datetime(best_time_unix, unit='s')
                     acq_time_unix[no_valid_points_minVZA] = 0 # use 0 as na for export
-                    minACQL.append(acq_time_unix * mask)
+                    minACQL.append(acq_time_unix) # * mask)
                     
                     acq_time = timestamp_array[x_indices, y_indices, maxLST_idx]  
                     acq_time_unix = acq_time.astype('datetime64[s]').astype(int) # convert back with pd.to_datetime(best_time_unix, unit='s')
                     acq_time_unix[no_valid_points_maxLST] = 0 # use 0 as na for export
-                    maxACQL.append(acq_time_unix * mask)
+                    maxACQL.append(acq_time_unix) # * mask)
 
                     # and also as readable tiffs
                     datetimes = time_slice.astype('datetime64[m]').astype('O')
@@ -176,16 +202,17 @@ for year in [2020]:
                     
                     acq_time = timestamp_array_read[x_indices, y_indices, minVZA_idx]  
                     acq_time[no_valid_points_minVZA] = 0 # use 0 as na for export
-                    minACQL_read.append(acq_time * mask)
+                    minACQL_read.append(acq_time) # * mask)
 
                     acq_time = timestamp_array_read[x_indices, y_indices, maxLST_idx]  
                     acq_time[no_valid_points_maxLST] = 0 # use 0 as na for export
-                    maxACQL_read.append(acq_time * mask)
+                    maxACQL_read.append(acq_time) # * mask)
 
 
                     # single scene insert
                     lst_order = [lst_order1, lst_order2, lst_order3]
                     vza_order = [vza_order1, vza_order2, vza_order3]
+                    vaa_order = [vaa_order1, vaa_order2, vaa_order3]
                     order_time_int = [order1_time_int, order2_time_int, order3_time_int]
                     order_time_read = [order1_time_read, order2_time_read, order3_time_read]
 
@@ -197,21 +224,25 @@ for year in [2020]:
                     snums, val_ind = sortListwithOtherlist(val_pixels, val_counter, rev=True)
 
                     for ldx, vali in enumerate(val_ind[:3]):
-                        lst_order[ldx].append(LST_slice[:,:,vali] * mask * valid_mask[:,:,vali].astype(int))
-                        vza_order[ldx].append(VZA_slice[:,:,vali] * mask * valid_mask[:,:,vali].astype(int))
+                        lst_order[ldx].append(LST_slice[:,:,vali] * valid_mask[:,:,vali].astype(int)) # * mask
+                        vza_order[ldx].append(VZA_slice[:,:,vali] * valid_mask[:,:,vali].astype(int)) # * mask 
+                        vaa_order[ldx].append(VAA_slice[:,:,vali] * valid_mask[:,:,vali].astype(int)) # * mask 
 
                         acq_time_unix = acq_time = np.where(valid_mask[:,:,vali], timestamp_array[:,:,vali], np.datetime64('1970-01-01T00:00:00')) 
-                        order_time_int[ldx].append(acq_time.astype('datetime64[s]').astype(int) * mask)
-                        order_time_read[ldx].append(np.where(valid_mask[:,:,vali], timestamp_array_read[:,:,vali], 0) * mask)
+                        order_time_int[ldx].append(acq_time.astype('datetime64[s]').astype(int)) # * mask)
+                        order_time_read[ldx].append(np.where(valid_mask[:,:,vali], timestamp_array_read[:,:,vali], 0)) # * mask)
 
 
                 ################## export minVZA LST composite
                 # LST masked
                 exportNCarrayDerivatesInt(file_LST, LST_stor_Path_minVZA_year, f'Daily_LST_minVZA_{year}_{INT_TO_MONTH[month]}.tif',
                                           doyL, np.dstack(minVZA_LST), numberOfBands=len(minVZA_LST), noData=0)
-                # # VZA masked
+                # VZA masked
                 exportNCarrayDerivatesInt(file_LST, VZA_stor_Path_minVZA_year, f'Daily_VZA_minVZA_{year}_{INT_TO_MONTH[month]}.tif',
                                           doyL, np.dstack(minVZA_VZA), numberOfBands=len(minVZA_VZA), noData=0)
+                # VAA masked
+                exportNCarrayDerivatesInt(file_LST, VAA_stor_Path_minVZA_year, f'Daily_VAA_minVZA_{year}_{INT_TO_MONTH[month]}.tif',
+                                          doyL, np.dstack(minVZA_VAA), numberOfBands=len(minVZA_VAA), noData=0)
                 # time
                 exportNCarrayDerivatesInt(file_LST, AcqTime_stor_path_year, f'Daily_AcqTime_minVZA_{year}_{INT_TO_MONTH[month]}.tif',
                                         doyL, np.dstack(minACQL), datType=gdal.GDT_Int64, numberOfBands=len(minACQL), noData=0)
@@ -227,6 +258,9 @@ for year in [2020]:
                 # VZA masked
                 exportNCarrayDerivatesInt(file_LST, VZA_stor_Path_maxLST_year, f'Daily_VZA_maxLST_{year}_{INT_TO_MONTH[month]}.tif',
                                           doyL, np.dstack(maxLST_VZA), numberOfBands=len(maxLST_VZA), noData=0)
+                # VAA masked
+                exportNCarrayDerivatesInt(file_LST, VAA_stor_Path_maxLST_year, f'Daily_VAA_maxLST_{year}_{INT_TO_MONTH[month]}.tif',
+                                          doyL, np.dstack(maxLST_VAA), numberOfBands=len(maxLST_VAA), noData=0)
                 # time
                 exportNCarrayDerivatesInt(file_LST, AcqTime_stor_path_year, f'Daily_AcqTime_maxLST_{year}_{INT_TO_MONTH[month]}.tif',
                                         doyL, np.dstack(maxACQL), datType=gdal.GDT_Int64 ,numberOfBands=len(maxACQL), noData=0)
@@ -244,6 +278,9 @@ for year in [2020]:
                     # VZA 
                     exportNCarrayDerivatesInt(file_LST, VZA_stor_Path_top3_year, f'Daily_VZA_order{ord + 1}_{year}_{INT_TO_MONTH[month]}.tif',
                                                 doyL, np.dstack(vza_order[ord]), numberOfBands=len(vza_order[ord]), noData=0)
+                    # VAA 
+                    exportNCarrayDerivatesInt(file_LST, VAA_stor_Path_top3_year, f'Daily_VAA_order{ord + 1}_{year}_{INT_TO_MONTH[month]}.tif',
+                                                doyL, np.dstack(vaa_order[ord]), numberOfBands=len(vaa_order[ord]), noData=0)
                     # time
                     exportNCarrayDerivatesInt(file_LST, AcqTime_stor_path_year, f'Daily_AcqTime_order{ord + 1}_{year}_{INT_TO_MONTH[month]}.tif',
                                             doyL, np.dstack(order_time_int[ord]), datType=gdal.GDT_Int64 ,numberOfBands=len(order_time_int[ord]), noData=0)
