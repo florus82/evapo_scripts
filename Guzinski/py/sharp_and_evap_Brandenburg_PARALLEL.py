@@ -17,7 +17,7 @@ from joblib import Parallel, delayed
 # paths
 lowmask_path = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/reprojected/THUENEN_GER_LST_WARP.tif'
 lowmask_bin_path = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/reprojected/THUENEN_GER_LST_WARP_BINARY.tif'
-temp_dump = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/SharpEvap/Brandenburg/SecondShot/'
+temp_dump = '/data/Aldhani/eoagritwin/et/Sentinel3/LST/SharpEvap/Brandenburg/SecondShot_2ndyear/'
 trash_path = f'{temp_dump}trash/'
 
 path_to_slope = '/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/SLOPE/'
@@ -45,7 +45,7 @@ joblist = []
 
 for idx, tile_to_process in enumerate(tiles_to_process):
     joblist.append([tile_to_process, temp_dump, path_to_slope, path_to_aspect, path_to_agro, path_to_force,
-                    path_to_inci, path_to_lst, '20190401', '20190910', ['maxLST'], ['S2only', 'allpred'], 3, False,
+                    path_to_inci, path_to_lst, '20180401', '20180910', ['maxLST'], ['S2only'], 2, False,
                     path_to_dem, path_to_lat, path_to_lon, path_to_acq, path_to_vaa, path_to_vza])
 
 

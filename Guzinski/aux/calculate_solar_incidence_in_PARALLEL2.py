@@ -9,6 +9,9 @@ from joblib import Parallel, delayed
 from helperToolz.guzinski import * 
 
 name_list = ['maxLST', 'minVZA', 'readable', 'order']
+ncores = 75
+year = 2018
+
 
 def calc_Incidence_per_tile(tile, year, comp):
 
@@ -18,7 +21,7 @@ def calc_Incidence_per_tile(tile, year, comp):
     dem_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/DEM/DEM_{tile}.tif'
     lat_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/LAT/Latitude_{tile}.tif'
     lon_path = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/LON/Longitude_{tile}.tif'
-    acq_times = getFilelist(f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/int_format/{year}', '.tif')
+    acq_times = getFilelist(f'/data/Aldhani/eoagritwin/et/Sentinel3/LST/LST_values/Acq_time/{year}', '.tif')
     acq_time_list = [file for file in acq_times if not any(substr in file for substr in [nam for nam in name_list if nam != comp])]
     stor_dir = f'/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/INCIDENCE2/{comp}/{year}/{tile}/'
 
@@ -104,9 +107,6 @@ def calc_Incidence_per_tile(tile, year, comp):
             # print(f'{month} is not needed at the moment')
 
 
-ncores = 75
-year = 2020
-
 tiles = [file.split('SLOPE_')[-1].split('.')[0] for file in getFilelist('/data/Aldhani/eoagritwin/et/Auxiliary/DEM/Force_Tiles/SLOPE/', '.tif')]
 
 # filter for tiles that have already been processed completely
@@ -114,7 +114,7 @@ tiles = [file.split('SLOPE_')[-1].split('.')[0] for file in getFilelist('/data/A
 # jobs = [[tiles2[i], 2019]  for i in range(len(tiles2))]
 # print(f'\n{len(tiles2)} tiles will be processed\n')
 
-jobs = [[tiles[i], year, 'minVZA']  for i in range(len(tiles))]
+jobs = [[tiles[i], year, 'maxLST']  for i in range(len(tiles))]
 print(f'\n{len(tiles)} tiles will be processed\n')
 
 

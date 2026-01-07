@@ -29,6 +29,8 @@ for year in years:
 
 germany = {"west": 5.592041, "south": 47.129951, "east": 15.26001, "north": 55.09723}
 
+dates = dates[85:87]
+
 while dates:
 
     for date in dates[:]:  # Iterates over a copy of the list to allow removal at the end without messing up the order
